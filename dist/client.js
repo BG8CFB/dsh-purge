@@ -8173,8 +8173,18 @@ window.__ModuleLoader__.load({
 		const TAB_KIND = "dsh-purge";
 		/** 红队演练台页签 kind（openTab 目标；槽位 key 固定为 redteam）。 */
 		const REDTEAM_TAB_KIND = "dsh-purge-redteam";
-		/** 声明依赖的客户端服务（右侧栏两服务软取：老宿主没有时面板降级，不悬空整个 client）。 */
-		const inject = ["slots", "locale"];
+		/**
+		* 声明依赖的客户端服务。sidebarRightTabs/sidebarRight 必须显式声明：
+		* cordis 对未 inject 的服务访问必抛（cannot get property without inject），
+		* try/catch 软取只会拿到 undefined，右侧栏页签会静默不注册。
+		* 宿主模块预载由 package.json 的 dsh.client.inject 保证（含 ui-sidebar-right）。
+		*/
+		const inject = [
+			"slots",
+			"locale",
+			"sidebarRightTabs",
+			"sidebarRight"
+		];
 		function apply(ctx) {
 			const sidebarRightTabs = (() => {
 				try {
