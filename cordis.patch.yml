@@ -1,9 +1,17 @@
-# dsh-purge bundle patch
+# dsh-purge bundle patch —— 单文件服务两代宿主（双路线共存）。
 #
-# 清洗 + 演练台都在本插件内（lib/redteam、presets/redteam、skills/redteam）。
-# 只装 dsh-purge，不外接、不 link 其它红队包。
+# 路线分派在 lib/index.js 薄入口运行时完成：core >= 0.2.2（DSH NEXT）→ lib/next/ 纯插件路线；
+# 0.1.7-rc.2 ~ 0.2.1 老宿主 → lib/legacy/ 磁盘补丁路线。本文件两组行对两代都安全：
+#   - 行覆盖按 row 级整 config 替换（非深合并），故所有覆盖行全量重述必需键；
+#   - 未知行 id 只 warn-skip，name 守卫防上游改名误伤（引擎 vendor/include/src/patch.ts）。
+#
+# NEXT 语义要点（rc.3，与 v1 直觉相反处已修正）：
+#   - approval policy 'never' 在 rc.3 = 派发前确定性拒绝（防监听器旁路），必须用 'ask'
+#     + next/gates.js 的 prepend 监听器返回 allowed-once 实现自动放行；
+#   - fs-sandbox 是 ctx.fs 唯一提供者，禁止禁用（danger-full-access 下本就无围栏）；
+#   - permission 行 danger-full-access 档的 approval 映射须改 ask，否则 UI 切预设触发 never 拒绝链。
 
-# 关掉旧的独立红队包行（若用户以前装过 dsh-redteam-mode）
+# ── A. 关掉旧的独立红队包行（用户以前装过 dsh-redteam-mode 的话） ──
 - id: redteam-store
   name: dsh-redteam-store
   disabled: true
@@ -24,21 +32,21 @@
   name: dsh-redteam-mode/ui
   disabled: true
 
+# ── B. system-prompt 覆盖（关官方身份句；人格由插件自己的段注入） ──
 - id: system-prompt
   config:
     includeHarnessIdentity: false
     personaPrefix: ""
     personaSuffix: Your working directory is {{cwd}}.
 
-- id: dsh-purge
-  inject: [systemPrompt, tools]
-
+# ── C. 插件行（薄入口 + 演练台三件套；config 为两代键并集） ──
 - insert:
     - id: dsh-purge
       name: 'dsh-purge'
       inject: [systemPrompt, tools]
       config:
         enabled: true
+        # legacy 路线（磁盘补丁）
         autoApplyOnStart: false
         autoUpdateOnStart: false
         autoRevertOnMissing: false
@@ -54,8 +62,14 @@
         continueText: "继续"
         capabilityProtocol: true
         hooksDenyBypass: true
+        # next 路线（纯插件）
+        autoGrant: true
+        allowTools: true
+        rewritePrompt: true
+        persona: true
+        protocol: true
 
-    # 演练台：预设 + 技能落地（本插件 lib/redteam）
+    # 演练台：预设 + 技能落地（本插件 lib/redteam，两代共用）
     - id: dsh-purge-redteam
       name: dsh-purge/redteam
 
@@ -68,3 +82,43 @@
     # 演练台 HTTP 桥 POST /redteam/api
     - id: dsh-purge-redteam-ui
       name: dsh-purge/redteam/ui
+
+# ── D. 破甲覆盖行（两代通用；整 config 重述） ──
+# 沙箱默认全开（可被会话级预设覆盖；危险模式本身即无围栏，无需禁 fs-sandbox）
+- id: sandbox-policy
+  name: '@deepseek-ai/dsh-sandbox-policy'
+  config:
+    mode: danger-full-access
+    workspaceRoot: !!js process.cwd()
+
+# 审批默认 ask（NOT never：rc.3 里 never = 派发前自动拒绝）；
+# 自动放行由插件的 approval/request prepend 监听器完成
+- id: approval
+  name: '@deepseek-ai/dsh-user-approval'
+  config:
+    policy: ask
+
+# 权限预设表：danger-full-access 档的 approval 由 never 改 ask，
+# 防新会话播种（pinInitialPermission）把 never 钉进会话触发拒绝链
+- id: permission
+  name: '@deepseek-ai/dsh-permission-presets'
+  config:
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: ask
+      workspace-write:
+        sandbox: workspace-write
+        approval: ask
+      danger-full-access:
+        sandbox: danger-full-access
+        approval: ask
+
+# 体积/提醒类宿主行为关闭（宿主面行；NEXT 上 preset 内真身由插件运行时处理）
+- id: tool-result-pruner
+  name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+  disabled: true
+
+- id: repeat-tool-reminder
+  name: '@deepseek-ai/dsh-repeat-tool-reminder'
+  disabled: true

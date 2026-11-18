@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import * as core from "../lib/core.js";
+import * as core from "../lib/legacy/core.js";
 import * as rules from "../lib/rules.js";
 
 const args = process.argv.slice(2);
@@ -113,7 +113,7 @@ async function main() {
     console.log("回滚完成 / Revert done。重启 dsh 后恢复 / restart to restore.");
     console.log("注: prompt-inject.md 保留（用户文件）/ prompt-inject.md kept (user file)");
   } else if (mode === "--uninstall") {
-    const { uninstallPurge } = await import("../lib/uninstall.js");
+    const { uninstallPurge } = await import("../lib/legacy/uninstall.js");
     const result = await uninstallPurge();
     if (result.applied) console.log("  已检测到补丁，已还原回原版。");
     else console.log("  未检测到已应用补丁，仍会清除插件文件。");

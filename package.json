@@ -1,19 +1,20 @@
 {
   "name": "dsh-purge",
-  "version": "1.1.71",
-  "description": "DeepSeek Harness 破甲：让所有模型都能破甲，不同模型可换不同提示词；默认提示词面向国模「小码酱」。Jailbreak for every model — swap prompts per model. 求 Star 收藏 ⭐ 如要二开，请查看署名要求部分",
+  "version": "2.1.0",
+  "description": "DSH 破甲插件（双路线）：DSH NEXT 走纯插件路线，老宿主走磁盘补丁路线；同一包运行时分派。",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
     ".": {
       "default": "./lib/index.js"
     },
-    "./client": "./client.js",
+    "./client": "./dist/client.js",
     "./redteam": "./lib/redteam/index.js",
     "./redteam/store": "./lib/redteam/store.js",
     "./redteam/ui": "./lib/redteam/ui.js",
     "./redteam/tools": "./lib/redteam/tools.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./next": "./lib/next/index.js"
   },
   "bin": {
     "dsh-purge": "bin/dsh-purge.js"
@@ -26,16 +27,16 @@
     "presets",
     "skills",
     "scripts",
-    "client.js",
     "cordis.patch.yml",
     "screenshots.json",
     "README.md",
     "README.zh-CN.md",
-    "LICENSE"
+    "LICENSE",
+    "dist"
   ],
   "scripts": {
     "embed-prompt": "node scripts/embed-default-prompt.mjs",
-    "build:client": "node scripts/build-client.mjs"
+    "build:client": "tsdown --config src/tsdown.config.ts && node scripts/verify-client-externals.mjs"
   },
   "license": "MIT",
   "keywords": [
@@ -67,19 +68,13 @@
     },
     "client": {
       "platform": "web",
+      "immediately": true,
       "inject": [
-        "@deepseek-ai/dsh-client-connection",
-        "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-slots",
-        "@deepseek-ai/dsh-client-ui-settings"
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
       ]
-    },
-    "install": {
-      "preferred": "tarball",
-      "tarball": "https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz",
-      "zip": "https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.zip",
-      "git": "https://github.com/YuJunZhiXue/dsh-purge.git"
     }
   },
   "publishConfig": {
@@ -89,7 +84,11 @@
     "@deepseek-ai/cordis": "^4.0.1"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.19.0",
+    "dsh": ">=0.1.7-rc.2 <0.3.0"
   },
-  "dshTarget": "0.2.0-rc.2"
+  "dshTarget": "0.2.0-rc.2",
+  "devDependencies": {
+    "tsdown": "^0.23.7"
+  }
 }

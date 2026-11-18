@@ -1,3 +1,27 @@
+# 2.1.0
+
+## 中文
+
+- 版本 **2.1.0**：双路线共存架构落地——**DSH NEXT（core 0.2.2-rc.3+）走纯插件路线（lib/next），老宿主（0.1.7-rc.2 ~ 0.2.1）保留磁盘补丁路线（lib/legacy）**，单一薄入口运行时探测宿主代际分派，官方更新宿主后 NEXT 路线无需重新应用。
+- 修复 NEXT 破甲三处根因：approval `policy: never` 在 rc.3 = 派发前确定性拒绝 → 改为 **ask + prepend 监听器自动放行**；`fs-sandbox` 禁用砍掉 ctx.fs 唯一提供者导致文件工具全灭 → 移除该禁用（danger-full-access 本就无围栏）；提示词改写层不遍历 `assembly.contexts` → 补齐双遍历 + 具名 context 整体替换 + 规则锚点按 rc.3 重校 + 失配自检告警。
+- permission 预设表 danger-full-access 档的 approval 由 never 改 ask，防新会话播种把拒绝链钉进会话。
+- NEXT 路线恢复 v1 全部功能面：/purge /rules /skills /rewind 命令、/dsh-purge/* HTTP 路由（同源校验）、人格加密槽四级回退（与老路线共用 prompt-inject.md）、自动重试/继续、会话回退、红队演练台全家挂载。
+- 红队运营优化：新增 `redteam_engagement_digest`（一次往返的靶标总览）、`redteam_scan_import`（gogo/fscan/nuclei 输出自动草稿落库）、`redteam_asset_next`（下一条该测什么 + 指纹 POC 推荐）；会话-靶标绑定落盘重启不丢；统一 change_log 变更流与得分快照物化；chain_add 成为唯一得分入口；删除废弃 report 工具；指挥流程改 digest 驱动、动态注入本靶标得分状态。
+- 护栏删除（产品决策）：区域门禁（net-scope）、演练台授权门（drill-grant）、环境适配发送门、预设内环境劝导段全部移除；技能文件内的操作纪律保留不动。
+- 自更新修复：zip 通道 COPY_NAMES 补齐 presets/skills/scripts/src/dist（此前更新后 bundle 会被跳过）；目录覆盖改 staging 原子换名（不再有半升级状态）；NEXT 路线更新后跳过磁盘补丁 reapply。
+- 前端重写为官方插件形态（tsdown 构建 + 官方槽位：设置页/右侧栏页签/输入框与会话头按钮），498KB 手写打包与文本锚点构建链退役。
+- engines.dsh 放宽为 `>=0.1.7-rc.2 <0.3.0`（两代宿主都能安装）；legacy 打击目标按代际过滤，并装时不再误触 NEXT 安装。
+
+## English
+
+- Version **2.1.0**: dual-route architecture — pure-plugin route (lib/next) for DSH NEXT (core 0.2.2-rc.3+), disk-patch route (lib/legacy) retained for older hosts (0.1.7-rc.2 ~ 0.2.1); a thin entry detects the host generation at runtime, so NEXT hosts update cleanly without re-applying.
+- Fixed the three NEXT jailbreak root causes: approval `never` now means deterministic rejection in rc.3 (switched to ask + prepend auto-grant listener); the `fs-sandbox` disable that killed the only ctx.fs provider was removed; the rewrite layer now also traverses `assembly.contexts` with named-context replacement, rc.3-calibrated anchors, and drift self-checks.
+- Restored the full v1 feature surface on NEXT: commands, /dsh-purge/* HTTP routes, sealed-persona 4-level fallback shared with the legacy route, auto retry/continue, rewind, and the full red-team console.
+- Red-team workflow upgrades: engagement digest, scanner-output import, asset-next queue with POC recommendations, persistent session bindings, unified change log, score snapshots, chain_add as the single scoring entry, digest-driven commander flow.
+- Guardrails removed as a product decision (region gate, drill authorization gate, environment send gate, preset advisories); operational discipline inside skill files is retained.
+- Self-update fixes: complete COPY_NAMES, atomic staging overlay, reapply skipped on the NEXT route.
+- Frontend rewritten to the official plugin shape (tsdown + official slots); the 498KB hand-rolled bundle and its text-anchor build chain are retired.
+
 # 1.1.71
 
 ## 中文

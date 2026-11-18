@@ -1,0 +1,576 @@
+[
+ {
+  "id": 1,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 规则改写工作区引言",
+  "t": "系统提示含强制语"
+ },
+ {
+  "id": 2,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 规则改写替代引言",
+  "t": "同上"
+ },
+ {
+  "id": 3,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 规则改写作用域强制语",
+  "t": "作用域段含强制语"
+ },
+ {
+  "id": 4,
+  "b": "A",
+  "v": "rewritten",
+  "m": "自有 preset 行提供 personaPrefix",
+  "t": "dump-config 有本插件 preset"
+ },
+ {
+  "id": 5,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改写审批禁用说明",
+  "t": "提示含可自由提权措辞"
+ },
+ {
+  "id": 6,
+  "b": "B",
+  "v": "config",
+  "m": "sandbox-policy mode=danger-full-access 后 confine 直通",
+  "t": "写文件不被 seatbelt 拦"
+ },
+ {
+  "id": 7,
+  "b": "B",
+  "v": "config",
+  "m": "覆盖 sandbox 行 config.mode",
+  "t": "dump-config mode 正确"
+ },
+ {
+  "id": 8,
+  "b": "B",
+  "v": "config",
+  "m": "覆盖 approval 行 config.policy=never",
+  "t": "dump-config policy 正确"
+ },
+ {
+  "id": 9,
+  "b": "B",
+  "v": "runtime",
+  "m": "approval/request 返回 allowed-once",
+  "t": "无弹窗直接执行"
+ },
+ {
+  "id": 10,
+  "b": "B",
+  "v": "config",
+  "m": "approval 行 config.policy=never",
+  "t": "同上"
+ },
+ {
+  "id": 11,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改写 never 场景话术",
+  "t": "话术已替换"
+ },
+ {
+  "id": 12,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改写 ask 场景话术",
+  "t": "话术已替换"
+ },
+ {
+  "id": 13,
+  "b": "B",
+  "v": "runtime",
+  "m": "pre-execute 放行 + mode 直达避免升级",
+  "t": "越权操作可执行"
+ },
+ {
+  "id": 14,
+  "b": "B",
+  "v": "runtime",
+  "m": "approval/request 无条件批准升级",
+  "t": "升级不弹窗"
+ },
+ {
+  "id": 15,
+  "b": "B",
+  "v": "config",
+  "m": "mode=danger-full-access 使 confine 不包装",
+  "t": "命令无沙箱前缀"
+ },
+ {
+  "id": 16,
+  "b": "B",
+  "v": "config",
+  "m": "danger 模式下 checkedTarget 直通",
+  "t": "工作区外写成功"
+ },
+ {
+  "id": 17,
+  "b": "B",
+  "v": "config",
+  "m": "fs-observation-policy 行保持 disabled",
+  "t": "无 FS_NOT_OBSERVED"
+ },
+ {
+  "id": 18,
+  "b": "E",
+  "v": "config",
+  "m": "repeat-tool-reminder 行 disabled",
+  "t": "无重复提醒"
+ },
+ {
+  "id": 19,
+  "b": "E",
+  "v": "config",
+  "m": "pruner 行 disabled 或阈值调高",
+  "t": "长结果不裁剪"
+ },
+ {
+  "id": 21,
+  "b": "E",
+  "v": "config",
+  "m": "覆盖 bash 行 timeoutMs",
+  "t": "超时值符合预期"
+ },
+ {
+  "id": 22,
+  "b": "E",
+  "v": "config",
+  "m": "tool-fs 行 config 提高读上限",
+  "t": "长行不被截断"
+ },
+ {
+  "id": 23,
+  "b": "E",
+  "v": "config",
+  "m": "subagent 行 config.maxDepth",
+  "t": "深链可行"
+ },
+ {
+  "id": 24,
+  "b": "E",
+  "v": "config",
+  "m": "tool-web 行 config.fetch=true",
+  "t": "fetch 可用"
+ },
+ {
+  "id": 25,
+  "b": "A",
+  "v": "config",
+  "m": "system-prompt 行 config 去官方身份",
+  "t": "无官方身份段"
+ },
+ {
+  "id": 26,
+  "b": "A",
+  "v": "rewritten",
+  "m": "自有 preset 覆盖 minimal 身份",
+  "t": "minimal 会话人格正确"
+ },
+ {
+  "id": 28,
+  "b": "C",
+  "v": "dropped",
+  "m": "第三方插件内部注入，不介入",
+  "t": "不适用"
+ },
+ {
+  "id": 29,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改工具描述 + post-execute 改结果头",
+  "t": "网页内容无不可信提示"
+ },
+ {
+  "id": 30,
+  "b": "B",
+  "v": "runtime",
+  "m": "自有 hooks 兼容层在 pre-execute 放行",
+  "t": "deny 不生效"
+ },
+ {
+  "id": 31,
+  "b": "B",
+  "v": "runtime",
+  "m": "同上（codex 配置）",
+  "t": "deny 不生效"
+ },
+ {
+  "id": 32,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改写 web 身份句",
+  "t": "身份句已替换"
+ },
+ {
+  "id": 33,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改写被拒提示",
+  "t": "提示无 policy denial 措辞"
+ },
+ {
+  "id": 34,
+  "b": "A",
+  "v": "rewritten",
+  "m": "post-execute 改写沙箱拒绝提示",
+  "t": "提示中性化"
+ },
+ {
+  "id": 35,
+  "b": "B",
+  "v": "runtime",
+  "m": "approval/request allowed-once 使升级不抛错",
+  "t": "升级链不断"
+ },
+ {
+  "id": 36,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改写提权 schema 文案",
+  "t": "schema 文案中性"
+ },
+ {
+  "id": 37,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改写子代理权限固定提示",
+  "t": "提示已改写"
+ },
+ {
+  "id": 38,
+  "b": "A",
+  "v": "rewritten",
+  "m": "自有 persona section，无需改官方 Config",
+  "t": "人格生效"
+ },
+ {
+  "id": 39,
+  "b": "C",
+  "v": "dropped",
+  "m": "旧版会话格式垫片",
+  "t": "不适用"
+ },
+ {
+  "id": 40,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 监听器自行追加注入段",
+  "t": "注入段存在"
+ },
+ {
+  "id": 42,
+  "b": "C",
+  "v": "dropped",
+  "m": "settings 旧 API 垫片",
+  "t": "不适用"
+ },
+ {
+  "id": 43,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 去除 4 个 preset 身份前缀",
+  "t": "无身份前缀"
+ },
+ {
+  "id": 45,
+  "b": "D",
+  "v": "dropped",
+  "m": "桌面更新接管，改为不干预",
+  "t": "更新走官方"
+ },
+ {
+  "id": 46,
+  "b": "D",
+  "v": "dropped",
+  "m": "同上文案",
+  "t": "不适用"
+ },
+ {
+  "id": 47,
+  "b": "C",
+  "v": "rewritten",
+  "m": "自建 anthropic adapter 去身份块",
+  "t": "OAuth 请求无 Claude 身份"
+ },
+ {
+  "id": 48,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改写 delete/move 提示",
+  "t": "提示已中性"
+ },
+ {
+  "id": 49,
+  "b": "C",
+  "v": "rewritten",
+  "m": "自建 adapter 工具名映射",
+  "t": "工具名不被改名"
+ },
+ {
+  "id": 50,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改会话引用框定",
+  "t": "框定语中性"
+ },
+ {
+  "id": 51,
+  "b": "B",
+  "v": "config",
+  "m": "permission-presets 行 config",
+  "t": "新会话直通"
+ },
+ {
+  "id": 52,
+  "b": "E",
+  "v": "config",
+  "m": "session-log 行 config 上传关",
+  "t": "默认不上传"
+ },
+ {
+  "id": 53,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改写 web 禁令",
+  "t": "禁令已去掉"
+ },
+ {
+  "id": 54,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改 present 限制语",
+  "t": "限制语已去掉"
+ },
+ {
+  "id": 55,
+  "b": "C",
+  "v": "rewritten",
+  "m": "assemble 层替换 system 段",
+  "t": "模型收到新系统消息"
+ },
+ {
+  "id": 56,
+  "b": "D",
+  "v": "dropped",
+  "m": "回退 UI，可选 slots 重写",
+  "t": "不适用"
+ },
+ {
+  "id": 57,
+  "b": "C",
+  "v": "rewritten",
+  "m": "自建 adapter 统一 system role",
+  "t": "第三方网关可用"
+ },
+ {
+  "id": 58,
+  "b": "D",
+  "v": "dropped",
+  "m": "会话回退派生",
+  "t": "不适用"
+ },
+ {
+  "id": 59,
+  "b": "B",
+  "v": "runtime",
+  "m": "auto-review 在 pre-execute 放行",
+  "t": "自动审阅不拦"
+ },
+ {
+  "id": 60,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 改 run_code 审批话术",
+  "t": "话术已中性"
+ },
+ {
+  "id": 61,
+  "b": "B",
+  "v": "config",
+  "m": "sandbox-policy 行 config",
+  "t": "策略符合预期"
+ },
+ {
+  "id": 62,
+  "b": "B",
+  "v": "runtime",
+  "m": "approval allowed-once + pre-execute allow",
+  "t": "无通道也放行"
+ },
+ {
+  "id": 63,
+  "b": "B",
+  "v": "config",
+  "m": "preset patch 打开 plan 行",
+  "t": "plan 可用"
+ },
+ {
+  "id": 64,
+  "b": "B",
+  "v": "runtime",
+  "m": "hooks stop/steer 在事件层中性化",
+  "t": "steer 不被拦"
+ },
+ {
+  "id": 65,
+  "b": "B",
+  "v": "runtime",
+  "m": "agent/pre-step 返回 enter",
+  "t": "pre-step 不拒"
+ },
+ {
+  "id": 66,
+  "b": "C",
+  "v": "rewritten",
+  "m": "assemble 输出即最终，无需守卫",
+  "t": "提示渲染正确"
+ },
+ {
+  "id": 67,
+  "b": "C",
+  "v": "rewritten",
+  "m": "agent/pre-step 空消息补位",
+  "t": "不空转"
+ },
+ {
+  "id": 68,
+  "b": "C",
+  "v": "rewritten",
+  "m": "同 67（system 节点）",
+  "t": "系统段存在"
+ },
+ {
+  "id": 69,
+  "b": "C",
+  "v": "dropped",
+  "m": "流释放稳定性修复",
+  "t": "不适用"
+ },
+ {
+  "id": 70,
+  "b": "E",
+  "v": "config",
+  "m": "preset patch 注入 shell 行",
+  "t": "minimal 有 pwsh"
+ },
+ {
+  "id": 71,
+  "b": "A",
+  "v": "rewritten",
+  "m": "第三方 preset 身份由 section 覆盖",
+  "t": "装了才有意义"
+ },
+ {
+  "id": 72,
+  "b": "C",
+  "v": "rewritten",
+  "m": "assemble 处理 in-history system",
+  "t": "系统消息生效"
+ },
+ {
+  "id": 73,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 删镜像提示行",
+  "t": "提示已删"
+ },
+ {
+  "id": 74,
+  "b": "C",
+  "v": "rewritten",
+  "m": "pre-step 前自行装配注入",
+  "t": "首步即带注入"
+ },
+ {
+  "id": 75,
+  "b": "C",
+  "v": "dropped",
+  "m": "回退时重置 todo",
+  "t": "不适用"
+ },
+ {
+  "id": 76,
+  "b": "A",
+  "v": "rewritten",
+  "m": "assemble 去 unrestricted 身份",
+  "t": "无人格前缀"
+ },
+ {
+  "id": 77,
+  "b": "D",
+  "v": "dropped",
+  "m": "回退 UI 记录",
+  "t": "不适用"
+ },
+ {
+  "id": 78,
+  "b": "C",
+  "v": "dropped",
+  "m": "app-boot 覆盖恢复",
+  "t": "不适用"
+ },
+ {
+  "id": 80,
+  "b": "E",
+  "v": "config",
+  "m": "preset patch 补齐 minimal 工具集",
+  "t": "工具齐全"
+ },
+ {
+  "id": 82,
+  "b": "D",
+  "v": "dropped",
+  "m": "桌面 profile 回退",
+  "t": "不适用"
+ },
+ {
+  "id": 83,
+  "b": "D",
+  "v": "dropped",
+  "m": "桌面 host 关闭容错",
+  "t": "不适用"
+ },
+ {
+  "id": 84,
+  "b": "D",
+  "v": "dropped",
+  "m": "同上",
+  "t": "不适用"
+ },
+ {
+  "id": 85,
+  "b": "C",
+  "v": "rewritten",
+  "m": "事件层强制 followup",
+  "t": "空响应后继续"
+ },
+ {
+  "id": 86,
+  "b": "C",
+  "v": "rewritten",
+  "m": "同上（steer）",
+  "t": "steer 后继续"
+ },
+ {
+  "id": 87,
+  "b": "C",
+  "v": "dropped",
+  "m": "卡住检测兜底",
+  "t": "不适用"
+ },
+ {
+  "id": 88,
+  "b": "C",
+  "v": "dropped",
+  "m": "同上（严格版）",
+  "t": "不适用"
+ }
+]

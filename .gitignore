@@ -32,3 +32,12 @@ default-prompt-inject.md
 /official-harness-payload.7z
 *.asar
 *.asar.bak
+
+# DSH NEXT source snapshot (local only, not tracked)
+/dsh-next-src/
+
+# Phase 0 基线快照（本地对比用）
+/.baseline/
+
+# NEXT app.asar 只读提取快照（源码级验证夹具，可随时用 extract-asar 重提）
+/.ai_temp/
