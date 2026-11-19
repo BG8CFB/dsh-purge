@@ -1,6 +1,6 @@
 # dsh-purge（DSH 破甲插件）
 
-**v2.1.0 · 双路线架构**：一个包同时服务两代宿主——
+**v2.21.1 · 双路线架构**：一个包同时服务两代宿主——
 
 - **DSH NEXT（core 0.2.2-rc.3 及以上）→ 纯插件路线**：不写任何宿主文件，人格/审批/沙箱/话术全部走官方扩展点（`cordis.patch.yml` 配置层 + 运行时监听器）。官方更新宿主后插件照常工作，无需重新应用。
 - **老宿主（dsh 0.1.7-rc.2 ~ 0.2.1）→ 磁盘补丁路线**：沿用既有的 asar 解包 + 字符串替换 + `.dshpurge.bak` 备份机制，行为与 1.1.x 一致。
@@ -13,16 +13,22 @@
 
 ## 安装
 
+> **别按包名装。** npm 上的 `dsh-purge` 是第三方占位包（历史上只发过 `0.0.0-stage`，空壳），`dsh plugin add dsh-purge` 拿到的不是本仓库代码，装完宿主里什么都没有——这是"装不上"的头号原因。本仓库的代码只从 GitHub 装。
+
+从本仓库 `master` 分支装（当前 **2.21.1**，含 NEXT 纯插件路线 + 红蓝两条台）：
+
 ```sh
 # DSH NEXT（桌面 2.0.23-next 及以上）
-dsh plugin --profile desktop add dsh-purge
+dsh plugin --profile desktop add https://github.com/BG8CFB/dsh-purge/archive/refs/heads/master.tar.gz
+
 # 官方 dsh web（NEXT 代 core）
-dsh plugin --profile web add dsh-purge
+dsh plugin --profile web add https://github.com/BG8CFB/dsh-purge/archive/refs/heads/master.tar.gz
 
 # 老宿主（0.1.7-rc.2 ~ 0.2.1）：同命令安装后，在面板「清洗」里点「应用」打磁盘补丁
 ```
 
-- registry 上不去时改用 `https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz`。
+- 等价写法：`add github:BG8CFB/dsh-purge`（pnpm 的 git 规格，需要能连 GitHub）；源码就在本地时直接 `add <本仓库路径>`。
+- **装完先核对版本**：安装目录里 `package.json` 的 `version` 应是 `2.21.1`。若还是 `1.1.71`，说明拿到的是旧默认分支，先 `dsh plugin --profile desktop remove dsh-purge`（`desktop` 换成你用的 profile）再按上面的 tarball 重装——`1.1.71` 只有老宿主磁盘补丁路线，在 NEXT 上跑不起来。
 - Node.js ≥ 22（老宿主无闪窗增强需 ≥22；engines.dsh 已放宽到 `>=0.1.7-rc.2 <0.3.0`，两代都能装）。
 - **NEXT 路线装完即生效**（重启宿主一次加载插件即可，没有"应用/还原"步骤）；老宿主路线仍走面板「应用 → 自动重启」。
 
@@ -126,4 +132,4 @@ node test/client-render-smoke.mjs # 客户端渲染冒烟（apply + 各槽位首
 
 ## 更新
 
-每版改动见 [Releases](https://github.com/YuJunZhiXue/dsh-purge/releases)。发新版：改 `package.json` 版本 → `release-notes.md` 首行必须是 `# <版本>`（CI 强制）→ 推 master 自动打包。自更新面板支持 stable / beta 双通道；NEXT 路线更新后手动重启宿主即可（无补丁可重打）。
+每版改动见 [Releases](https://github.com/YuJunZhiXue/dsh-purge/releases)。发新版：改 `package.json` 版本 → `release-notes.md` 首行必须是 `# <版本>`（CI 强制）→ 推 master 即最新（本 fork 的 Release CI 只在上游仓库跑，故这里不自动出 Release，装 `master` 的 tarball 就是最新版）。自更新面板支持 stable / beta 双通道；NEXT 路线更新后手动重启宿主即可（无补丁可重打）。

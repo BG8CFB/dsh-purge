@@ -1,3 +1,16 @@
+# 2.21.1
+
+## 中文
+
+### 安装修复：默认分支终于有新版 + 别再按包名装
+
+"照着这个仓库装，却还是 1.1.71 / 完全装不上"有两个独立原因，本版一并修掉：
+
+- **默认分支停在 1.1.71**：GitHub 仓库的默认分支是 `master`，而 2.1.0 / 2.21.0 一直只在 `v1.1.71-work` 上。别人按仓库装（`master` 的 tarball、`github:owner/repo` 规格、克隆默认分支）拿到的都是 1.1.71——那版只有老宿主磁盘补丁路线，在 NEXT 上装完等于没装。本版把 2.21.x 全量同步进 `master`。
+- **npm 上的 `dsh-purge` 不是这个仓库**：registry 里只有第三方占位包 `0.0.0-stage`（空壳），README 原先照抄上游写的 `dsh plugin add dsh-purge` 装到的是它。安装段已改成从本仓库 tarball 装，并写明装完核对 `package.json` 里 `version` 的步骤。
+
+同时把 `master` 上的公告与署名文档（`MIRROR-NOTICE.md`、`docs/notice/*`）合进主线，README 正文保留 2.21.x。
+
 # 2.21.0
 
 ## 中文

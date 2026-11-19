@@ -1,6 +1,6 @@
 # dsh-purge (DSH jailbreak plugin)
 
-**v2.1.0 · dual-route architecture** — one package serves two host generations:
+**v2.21.1 · dual-route architecture** — one package serves two host generations:
 
 - **DSH NEXT (core 0.2.2-rc.3+)** → **pure-plugin route**: zero host-file writes. Persona / approval / sandbox / prompt wording all go through official extension points (`cordis.patch.yml` config layer + runtime listeners). Official host updates never require re-applying.
 - **Older hosts (dsh 0.1.7-rc.2 ~ 0.2.1)** → **disk-patch route**: the established asar-unpack + string-replacement + `.dshpurge.bak` mechanism, unchanged from 1.1.x.
@@ -13,15 +13,20 @@ Borrowing the name, ideas, code, or prompts of this project requires attribution
 
 ## Install
 
+> **Do not install by package name.** `dsh-purge` on npm is a third-party placeholder (only `0.0.0-stage` was ever published — an empty shell), so `dsh plugin add dsh-purge` does **not** install this repository's code and the host shows nothing. That is the #1 cause of "it won't install". This project's code is distributed from GitHub only.
+
+Install from this repo's `master` branch (currently **2.21.1**: NEXT pure-plugin route + red/blue consoles):
+
 ```sh
 # DSH NEXT desktop (2.0.23-next+)
-dsh plugin --profile desktop add dsh-purge
+dsh plugin --profile desktop add https://github.com/BG8CFB/dsh-purge/archive/refs/heads/master.tar.gz
 # official dsh web (NEXT-generation core)
-dsh plugin --profile web add dsh-purge
-# older hosts: same command, then click "Apply" in the panel for the disk patches
+dsh plugin --profile web add https://github.com/BG8CFB/dsh-purge/archive/refs/heads/master.tar.gz
+# older hosts (0.1.7-rc.2 ~ 0.2.1): same command, then click "Apply" in the panel for the disk patches
 ```
 
-- If the registry is unreachable, use `https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz`.
+- Equivalent: `add github:BG8CFB/dsh-purge` (pnpm git spec, needs GitHub reachable); if the source is already local, `add <path to this repo>`.
+- **Check the version right after installing**: `version` in the install directory's `package.json` must read `2.21.1`. If it still says `1.1.71` you received the old default branch — run `dsh plugin --profile desktop remove dsh-purge` (swap `desktop` for your profile) and reinstall from the tarball above; `1.1.71` is the legacy disk-patch-only line and cannot run on NEXT.
 - Node.js ≥ 22; `engines.dsh` is `>=0.1.7-rc.2 <0.3.0` so both host generations install.
 - The **NEXT route works immediately** after one host restart (nothing to apply or revert); the legacy route keeps its Apply → auto-restart flow.
 
@@ -85,4 +90,4 @@ npm run build                    # frontend tsdown build + externals check
 
 ## Updates
 
-See [Releases](https://github.com/YuJunZhiXue/dsh-purge/releases). Publishing: bump `package.json`, make the first line of `release-notes.md` read `# <version>` (CI enforces), push to master. The panel offers stable/beta channels; after a self-update on the NEXT route just restart the host.
+See [Releases](https://github.com/YuJunZhiXue/dsh-purge/releases). Publishing: bump `package.json`, make the first line of `release-notes.md` read `# <version>` (CI enforces), push to master (this fork's Release CI only runs in the upstream repo, so no Release is cut here — installing `master`'s tarball is the latest). The panel offers stable/beta channels; after a self-update on the NEXT route just restart the host.
