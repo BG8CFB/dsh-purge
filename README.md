@@ -90,4 +90,4 @@ npm run build                    # frontend tsdown build + externals check
 
 ## Updates
 
-See [Releases](https://github.com/YuJunZhiXue/dsh-purge/releases). Publishing: bump `package.json`, make the first line of `release-notes.md` read `# <version>` (CI enforces), push to master (this fork's Release CI only runs in the upstream repo, so no Release is cut here — installing `master`'s tarball is the latest). The panel offers stable/beta channels; after a self-update on the NEXT route just restart the host.
+See [Releases](https://github.com/BG8CFB/dsh-purge/releases). Publishing: bump `package.json`, make the first line of `release-notes.md` read `# <version>` (CI enforces upstream), push to master, then cut the matching `v<version>` tag and Release by hand (this fork does not run the upstream Release CI; the update panel reads GitHub tags, so the tag is what makes a version discoverable — installing `master`'s tarball is always the latest). The panel offers stable/beta channels; after a self-update on the NEXT route just restart the host.

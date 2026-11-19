@@ -132,4 +132,4 @@ node test/client-render-smoke.mjs # 客户端渲染冒烟（apply + 各槽位首
 
 ## 更新
 
-每版改动见 [Releases](https://github.com/YuJunZhiXue/dsh-purge/releases)。发新版：改 `package.json` 版本 → `release-notes.md` 首行必须是 `# <版本>`（CI 强制）→ 推 master 即最新（本 fork 的 Release CI 只在上游仓库跑，故这里不自动出 Release，装 `master` 的 tarball 就是最新版）。自更新面板支持 stable / beta 双通道；NEXT 路线更新后手动重启宿主即可（无补丁可重打）。
+每版改动见 [Releases](https://github.com/BG8CFB/dsh-purge/releases)。发新版：改 `package.json` 版本 → `release-notes.md` 首行必须是 `# <版本>`（上游 CI 强制）→ 推 master → 再手工打对应的 `v<版本>` tag 和 Release（本 fork 不跑上游的 Release CI；自更新面板读的是 GitHub tag，所以打得出去 tag 才算“能查到新版”，装 `master` 的 tarball 始终是最新版）。自更新面板支持 stable / beta 双通道；NEXT 路线更新后手动重启宿主即可（无补丁可重打）。
