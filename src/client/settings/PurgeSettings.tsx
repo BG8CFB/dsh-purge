@@ -1,20 +1,24 @@
 /**
- * settings.section（id: dsh-purge）的设置页主体。
+ * settings.section（id: dsh-purge）的设置页主体 —— 全插件唯一的全局配置入口。
  *
  * 四个内嵌子页（顶部页签切换）：
  *   1. 人格：override 读 / 写 / 恢复默认（GET/POST /dsh-purge/override）；
  *   2. 规则集：列表 / 新建 / 编辑 / 激活 / 删除 / 还原出厂 + 工作区策略三档（/dsh-purge/rules）；
  *   3. 技能：列表 / 新建 / 删除 / 导入 base64 zip（/dsh-purge/skills）；
  *   4. 更新通道：当前版本 / 检查更新 / stable-beta 双通道切换（/dsh-purge/update）。
+ *
+ * 主面板曾经有第三个页签渲染同一个组件（一份表单挂两处），已删除：
+ * 全局配置只在这里，破甲面板右上 ⚙ 负责深链过来。
  */
 import { useCallback, useEffect, useState } from 'react'
-import { h, type NoticeSource, Loading, ErrorLine, EmptyHint } from '../shared/ui.ts'
+import { h, type NoticeSource, Loading, ErrorLine, EmptyHint, useAsyncData } from '../shared/ui.ts'
+import { confirmDialog } from '../shared/dialogs.tsx'
 import {
   apiGet, checkUpdate, fetchOverride, fetchStatus, rulesOp, saveOverride, skillsOp, updateOp,
   type OverridePayload, type RuleReadPayload, type RulesStatusPayload, type SkillsImportPayload,
   type SkillsStatusPayload, type StatusPayload, type UpdateCheckPayload,
 } from '../shared/api.ts'
-import type { Translate } from '../panel/RewindSafe.ts'
+import type { Translate } from '../locale.ts'
 
 export interface PurgeSettingsProps {
   t: Translate
@@ -37,10 +41,11 @@ export function PurgeSettings(props: PurgeSettingsProps): ReturnType<typeof h> {
     ['update', t('settings.update')],
   ]
   return h('div', { class: 'dshp-root' },
+    h('div', { class: 'dshp-hint' }, t('settings.hint')),
     h('div', { class: 'dshp-tabs' },
       tabs.map(([key, label]) => h('button', {
         key, type: 'button',
-        class: `dshp-tab${tab === key ? ' dshp-tab-active' : ''}`,
+        class: 'dshp-tab' + (tab === key ? ' dshp-tab-active' : ''),
         onClick: () => { setTab(key) },
       }, label))),
     tab === 'persona' ? h(PersonaEditor, { t, notices: props.notices }) : null,
@@ -54,20 +59,10 @@ export function PurgeSettings(props: PurgeSettingsProps): ReturnType<typeof h> {
 
 function PersonaEditor(props: { t: Translate; notices: NoticeSource }): ReturnType<typeof h> {
   const t = props.t
-  const [phase, setPhase] = useState<'loading' | 'error' | 'ready'>('loading')
-  const [error, setError] = useState('')
-  const [meta, setMeta] = useState<OverridePayload | null>(null)
-  const [content, setContent] = useState('')
+  const { state, setData, reload } = useAsyncData(fetchOverride)
+  /** 本地草稿；null 表示"跟随服务端内容"。 */
+  const [draft, setDraft] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-
-  const load = useCallback(() => {
-    setPhase('loading')
-    void fetchOverride().then((result) => {
-      if (result.ok) { setMeta(result.data); setContent(result.data.content); setPhase('ready') }
-      else { setError(result.error); setPhase('error') }
-    })
-  }, [])
-  useEffect(() => { load() }, [load])
 
   const persist = useCallback((next: string, doneText: string) => {
     if (saving) return
@@ -75,23 +70,26 @@ function PersonaEditor(props: { t: Translate; notices: NoticeSource }): ReturnTy
     void saveOverride(next).then((result) => {
       setSaving(false)
       if (result.ok) {
-        setMeta(result.data)
-        setContent(result.data.content)
+        setData(result.data)
+        setDraft(null)
         props.notices.report(doneText, 'success')
       } else {
-        props.notices.report(`${t('persona.saveFail')}：${result.error}`, 'failure')
+        props.notices.report(t('persona.saveFail') + '：' + result.error, 'failure')
       }
     })
-  }, [saving, props.notices, t])
+  }, [saving, setData, props.notices, t])
 
-  if (phase === 'loading') return h(Loading, { text: t('common.loading') })
-  if (phase === 'error') return h(ErrorLine, { label: t('persona.loadFail'), message: error, retryText: t('common.retry'), onRetry: load })
-  const unchanged = meta !== null && content === meta.content
+  if (state.phase === 'loading') return h(Loading, { text: t('common.loading') })
+  if (state.phase === 'error') return h(ErrorLine, { label: t('persona.loadFail'), message: state.error, retryText: t('common.retry'), onRetry: reload })
+
+  const meta: OverridePayload = state.data
+  const content = draft === null ? meta.content : draft
+  const unchanged = draft === null || draft === meta.content
   return h('div', { class: 'dshp-section' },
     h('div', { class: 'dshp-section-title' }, t('persona.title')),
     h('div', { class: 'dshp-hint' }, t('persona.hint')),
-    meta === null ? null : h('div', { class: 'dshp-row' },
-      h('span', { class: `dshp-tag${meta.customized ? '' : ' dshp-tag-active'}` },
+    h('div', { class: 'dshp-row' },
+      h('span', { class: 'dshp-tag' + (meta.customized ? '' : ' dshp-tag-active') },
         meta.customized ? t('persona.customized') : t('persona.usingDefault')),
       h('span', { class: 'dshp-hint' }, t('persona.path', { path: meta.path }))),
     h('textarea', {
@@ -99,7 +97,7 @@ function PersonaEditor(props: { t: Translate; notices: NoticeSource }): ReturnTy
       value: content,
       spellCheck: false,
       'aria-label': t('persona.title'),
-      onChange: (event: { target: { value: string } }) => { setContent(event.target.value) },
+      onChange: (event: { target: { value: string } }) => { setDraft(event.target.value) },
     }),
     content.trim() === '' ? h('div', { class: 'dshp-error' }, t('persona.emptyWarn')) : null,
     h('div', { class: 'dshp-toolbar' },
@@ -113,10 +111,11 @@ function PersonaEditor(props: { t: Translate; notices: NoticeSource }): ReturnTy
       }, saving ? t('common.loading') : t('common.save')),
       h('button', {
         class: 'dshp-btn dshp-btn-danger', type: 'button',
-        disabled: saving || (meta !== null && content === meta.defaultContent && meta.content === meta.defaultContent),
+        disabled: saving || (meta.content === meta.defaultContent && draft === null),
         onClick: () => {
-          if (meta === null) return
-          if (window.confirm(t('persona.resetConfirm'))) persist(meta.defaultContent, t('persona.resetDone'))
+          void confirmDialog(t('persona.resetConfirm'), {
+            okText: t('persona.reset'), cancelText: t('common.cancel'), danger: true,
+          }).then((ok) => { if (ok) persist(meta.defaultContent, t('persona.resetDone')) })
         },
       }, t('persona.reset'))),
   )
@@ -137,30 +136,17 @@ interface RuleDraft {
 
 function RulesManager(props: { t: Translate; notices: NoticeSource }): ReturnType<typeof h> {
   const t = props.t
-  const [phase, setPhase] = useState<'loading' | 'error' | 'ready'>('loading')
-  const [error, setError] = useState('')
-  const [status, setStatus] = useState<RulesStatusPayload | null>(null)
+  const { state, reload, setData } = useAsyncData(() => apiGet<RulesStatusPayload>('/dsh-purge/rules'))
   const [draft, setDraft] = useState<RuleDraft | null>(null)
   const [draftSaving, setDraftSaving] = useState(false)
   const [newId, setNewId] = useState('')
   const [idError, setIdError] = useState('')
   const [policyBusy, setPolicyBusy] = useState(false)
 
-  const load = useCallback(() => {
-    setPhase('loading')
-    void apiGet<RulesStatusPayload>('/dsh-purge/rules').then((result) => {
-      if (result.ok) { setStatus(result.data); setPhase('ready') }
-      else { setError(result.error); setPhase('error') }
-    })
-  }, [])
-  useEffect(() => { load() }, [load])
-
-  const refresh = useCallback(() => { void load() }, [load])
-
   const openRule = useCallback((id: string) => {
     void rulesOp<RuleReadPayload>('read', { id }).then((result) => {
       if (result.ok) setDraft({ id: result.data.id, name: result.data.name, target: result.data.target, content: result.data.content })
-      else props.notices.report(`${result.error}`, 'failure')
+      else props.notices.report(result.error, 'failure')
     })
   }, [props.notices])
 
@@ -168,69 +154,77 @@ function RulesManager(props: { t: Translate; notices: NoticeSource }): ReturnTyp
     const id = newId.trim()
     if (!RULE_ID_RE.test(id)) { setIdError(t('rules.invalidId')); return }
     setIdError('')
-    // 创建即写一条空规则，再进入编辑器
     void rulesOp('save', { id, content: '' }).then((result) => {
-      if (result.ok) { setNewId(''); refresh(); openRule(id) }
-      else props.notices.report(`${result.error}`, 'failure')
+      if (result.ok) { setNewId(''); reload(); openRule(id) }
+      else props.notices.report(result.error, 'failure')
     })
-  }, [newId, t, refresh, openRule, props.notices])
+  }, [newId, t, reload, openRule, props.notices])
 
   const saveDraft = useCallback(() => {
     if (draft === null || draftSaving) return
     setDraftSaving(true)
     void rulesOp('save', { id: draft.id, content: draft.content, name: draft.name, target: draft.target }).then((result) => {
       setDraftSaving(false)
-      if (result.ok) { props.notices.report(t('common.saved'), 'success'); refresh() }
-      else props.notices.report(`${result.error}`, 'failure')
+      if (result.ok) { props.notices.report(t('common.saved'), 'success'); reload() }
+      else props.notices.report(result.error, 'failure')
     })
-  }, [draft, draftSaving, props.notices, t, refresh])
+  }, [draft, draftSaving, props.notices, t, reload])
 
   const activate = useCallback((id: string) => {
     void rulesOp('activate', { id }).then((result) => {
-      if (result.ok) { props.notices.report(t('rules.activated', { id }), 'success'); refresh() }
-      else props.notices.report(`${result.error}`, 'failure')
+      if (result.ok) { props.notices.report(t('rules.activated', { id }), 'success'); reload() }
+      else props.notices.report(result.error, 'failure')
     })
-  }, [props.notices, t, refresh])
+  }, [props.notices, t, reload])
 
   const remove = useCallback((id: string) => {
-    if (!window.confirm(t('rules.deleteConfirm', { id }))) return
-    void rulesOp('delete', { id }).then((result) => {
-      if (result.ok) {
-        props.notices.report(t('common.saved'), 'success')
-        if (draft !== null && draft.id === id) setDraft(null)
-        refresh()
-      } else props.notices.report(`${result.error}`, 'failure')
+    void confirmDialog(t('rules.deleteConfirm', { id }), {
+      okText: t('common.delete'), cancelText: t('common.cancel'), danger: true,
+    }).then((ok) => {
+      if (!ok) return
+      void rulesOp('delete', { id }).then((result) => {
+        if (result.ok) {
+          props.notices.report(t('rules.deleted', { id }), 'success')
+          setDraft((prev) => (prev !== null && prev.id === id ? null : prev))
+          reload()
+        } else props.notices.report(result.error, 'failure')
+      })
     })
-  }, [t, props.notices, refresh, draft])
+  }, [t, props.notices, reload])
 
   const factoryReset = useCallback(() => {
-    if (!window.confirm(t('rules.resetConfirm'))) return
-    void rulesOp('reset').then((result) => {
-      if (result.ok) { props.notices.report(t('rules.resetDone'), 'success'); refresh() }
-      else props.notices.report(`${result.error}`, 'failure')
+    void confirmDialog(t('rules.resetConfirm'), {
+      okText: t('rules.reset'), cancelText: t('common.cancel'), danger: true,
+    }).then((ok) => {
+      if (!ok) return
+      void rulesOp('reset').then((result) => {
+        if (result.ok) { props.notices.report(t('rules.resetDone'), 'success'); reload() }
+        else props.notices.report(result.error, 'failure')
+      })
     })
-  }, [t, props.notices, refresh])
+  }, [t, props.notices, reload])
 
   const setPolicy = useCallback((policy: string) => {
-    if (status === null || policyBusy) return
+    if (state.phase !== 'ready' || policyBusy) return
     setPolicyBusy(true)
     void rulesOp('set-policy', { policy }).then((result) => {
       setPolicyBusy(false)
       if (result.ok) {
+        setData({ ...state.data, workspace_policy: policy })
         props.notices.report(t('rules.policySaved', { policy }), 'success')
-        setStatus({ ...status, workspace_policy: policy })
-      } else props.notices.report(`${result.error}`, 'failure')
+      } else props.notices.report(result.error, 'failure')
     })
-  }, [status, policyBusy, props.notices, t])
+  }, [state, policyBusy, props.notices, t, setData])
 
-  if (phase === 'loading') return h(Loading, { text: t('common.loading') })
-  if (phase === 'error') return h(ErrorLine, { label: t('common.error'), message: error, retryText: t('common.retry'), onRetry: load })
+  if (state.phase === 'loading') return h(Loading, { text: t('common.loading') })
+  if (state.phase === 'error') return h(ErrorLine, { label: t('common.error'), message: state.error, retryText: t('common.retry'), onRetry: reload })
 
-  const rules = status?.rules ?? []
-  const policies = status?.workspace_policies ?? ['fallback', 'strict', 'always']
+  const status = state.data
+  const rules = status.rules ?? []
+  const policies = status.workspace_policies ?? ['fallback', 'strict', 'always']
   return h('div', { class: 'dshp-section' },
     h('div', { class: 'dshp-section-title' }, t('rules.title')),
-    status === null ? null : h('div', { class: 'dshp-hint' }, t('rules.dir', { path: status.rules_dir })),
+    h('div', { class: 'dshp-hint' }, t('rules.dir', { path: status.rules_dir })),
 
     // 新建
     h('div', { class: 'dshp-form' },
@@ -283,20 +277,20 @@ function RulesManager(props: { t: Translate; notices: NoticeSource }): ReturnTyp
       ? h(EmptyHint, { text: t('rules.empty') })
       : h('div', { class: 'dshp-list' },
         rules.map((rule) => {
-          const isActive = status !== null && status.active === rule.id
+          const isActive = status.active === rule.id
           return h('div', { key: rule.id, class: 'dshp-list-item' },
             h('div', { class: 'dshp-list-item-main' },
               h('div', { class: 'dshp-list-item-title' },
-                h('span', { class: 'dshp-list-item-name' }, rule.name === '' ? rule.id : `${rule.name}`),
+                h('span', { class: 'dshp-list-item-name' }, rule.name === '' ? rule.id : rule.name),
                 isActive ? h('span', { class: 'dshp-tag dshp-tag-active' }, t('rules.active')) : null,
                 h('span', { class: 'dshp-tag' }, rule.target)),
-              h('div', { class: 'dshp-list-item-sub' }, `${rule.id} · ${rule.size} B`)),
+              h('div', { class: 'dshp-list-item-sub' }, rule.id + ' · ' + rule.size + ' B')),
             h('div', { class: 'dshp-list-actions' },
               isActive ? null : h('button', { class: 'dshp-btn', type: 'button', onClick: () => { activate(rule.id) } }, t('rules.activate')),
               h('button', { class: 'dshp-btn', type: 'button', onClick: () => { openRule(rule.id) } }, t('rules.edit')),
               h('button', { class: 'dshp-btn dshp-btn-danger', type: 'button', onClick: () => { remove(rule.id) } }, t('rules.delete'))))
         })),
-    isActiveAndDrifted(status)
+    status.active !== null && status.agents_exists && !status.agents_synced
       ? h('div', { class: 'dshp-hint' }, t('rules.notSynced')) : null,
 
     // 工作区策略三档
@@ -306,21 +300,16 @@ function RulesManager(props: { t: Translate; notices: NoticeSource }): ReturnTyp
         h('input', {
           type: 'radio', name: 'dshp-policy', value: policy,
           disabled: policyBusy,
-          checked: status?.workspace_policy === policy,
+          checked: status.workspace_policy === policy,
           onChange: () => { setPolicy(policy) },
         }),
-        h('span', null, t(`rules.policy.${policy}`))))),
+        h('span', null, t('rules.policy.' + policy))))),
 
     // 还原出厂
     h('div', { class: 'dshp-toolbar' },
       h('span', { class: 'dshp-spacer' }),
       h('button', { class: 'dshp-btn dshp-btn-danger', type: 'button', onClick: factoryReset }, t('rules.reset'))),
   )
-}
-
-/** 已激活规则但目标文件与内容不同步时提示（复检提示信息）。 */
-function isActiveAndDrifted(status: RulesStatusPayload | null): boolean {
-  return status !== null && status.active !== null && status.agents_exists && !status.agents_synced
 }
 
 // ============ 3. 技能 ============
@@ -330,25 +319,13 @@ const SKILL_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 function SkillsManager(props: { t: Translate; notices: NoticeSource }): ReturnType<typeof h> {
   const t = props.t
-  const [phase, setPhase] = useState<'loading' | 'error' | 'ready'>('loading')
-  const [error, setError] = useState('')
-  const [status, setStatus] = useState<SkillsStatusPayload | null>(null)
+  const { state, reload } = useAsyncData(() => apiGet<SkillsStatusPayload>('/dsh-purge/skills'))
   const [newId, setNewId] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [newContent, setNewContent] = useState('')
   const [creating, setCreating] = useState(false)
   const [idError, setIdError] = useState('')
   const [importing, setImporting] = useState(false)
-
-  const load = useCallback(() => {
-    setPhase('loading')
-    void apiGet<SkillsStatusPayload>('/dsh-purge/skills').then((result) => {
-      if (result.ok) { setStatus(result.data); setPhase('ready') }
-      else { setError(result.error); setPhase('error') }
-    })
-  }, [])
-  useEffect(() => { load() }, [load])
-  const refresh = useCallback(() => { void load() }, [load])
 
   const create = useCallback(() => {
     const id = newId.trim()
@@ -361,18 +338,22 @@ function SkillsManager(props: { t: Translate; notices: NoticeSource }): ReturnTy
       if (result.ok) {
         props.notices.report(t('common.saved'), 'success')
         setNewId(''); setNewDesc(''); setNewContent('')
-        refresh()
-      } else props.notices.report(`${result.error}`, 'failure')
+        reload()
+      } else props.notices.report(result.error, 'failure')
     })
-  }, [newId, newDesc, newContent, creating, t, props.notices, refresh])
+  }, [newId, newDesc, newContent, creating, t, props.notices, reload])
 
   const remove = useCallback((id: string) => {
-    if (!window.confirm(t('skills.deleteConfirm', { id }))) return
-    void skillsOp('delete', { id }).then((result) => {
-      if (result.ok) { props.notices.report(t('common.saved'), 'success'); refresh() }
-      else props.notices.report(`${result.error}`, 'failure')
+    void confirmDialog(t('skills.deleteConfirm', { id }), {
+      okText: t('common.delete'), cancelText: t('common.cancel'), danger: true,
+    }).then((ok) => {
+      if (!ok) return
+      void skillsOp('delete', { id }).then((result) => {
+        if (result.ok) { props.notices.report(t('skills.deleted', { id }), 'success'); reload() }
+        else props.notices.report(result.error, 'failure')
+      })
     })
-  }, [t, props.notices, refresh])
+  }, [t, props.notices, reload])
 
   // 导入：FileReader 读 zip 为 base64，POST op:import {data, name}
   const importArchive = useCallback((file: File) => {
@@ -381,7 +362,7 @@ function SkillsManager(props: { t: Translate; notices: NoticeSource }): ReturnTy
     const reader = new FileReader()
     reader.onerror = () => {
       setImporting(false)
-      props.notices.report(`${t('skills.importFail')}：read error`, 'failure')
+      props.notices.report(t('skills.importFail') + '：read error', 'failure')
     }
     reader.onload = () => {
       // ArrayBuffer → base64（大文件分块转换，zip 上限 12MB）
@@ -396,20 +377,21 @@ function SkillsManager(props: { t: Translate; notices: NoticeSource }): ReturnTy
         setImporting(false)
         if (result.ok) {
           props.notices.report(t('skills.imported', { n: String(result.data.imported.length) }), 'success')
-          refresh()
-        } else props.notices.report(`${t('skills.importFail')}：${result.error}`, 'failure')
+          reload()
+        } else props.notices.report(t('skills.importFail') + '：' + result.error, 'failure')
       })
     }
     reader.readAsArrayBuffer(file)
-  }, [importing, props.notices, t, refresh])
+  }, [importing, props.notices, t, reload])
 
-  if (phase === 'loading') return h(Loading, { text: t('common.loading') })
-  if (phase === 'error') return h(ErrorLine, { label: t('skills.loadFail'), message: error, retryText: t('common.retry'), onRetry: load })
+  if (state.phase === 'loading') return h(Loading, { text: t('common.loading') })
+  if (state.phase === 'error') return h(ErrorLine, { label: t('skills.loadFail'), message: state.error, retryText: t('common.retry'), onRetry: reload })
 
-  const skills = status?.skills ?? []
+  const status = state.data
+  const skills = status.skills ?? []
   return h('div', { class: 'dshp-section' },
     h('div', { class: 'dshp-section-title' }, t('skills.title')),
-    status === null ? null : h('div', { class: 'dshp-hint' }, t('skills.dir', { path: status.skills_dir })),
+    h('div', { class: 'dshp-hint' }, t('skills.dir', { path: status.skills_dir })),
 
     // 导入 zip（base64 上传）
     h('div', { class: 'dshp-form' },
@@ -466,7 +448,7 @@ function SkillsManager(props: { t: Translate; notices: NoticeSource }): ReturnTy
               skill.valid ? null : h('span', { class: 'dshp-tag dshp-tag-error' }, t('skills.invalid')),
               h('span', { class: 'dshp-tag' }, skill.kind)),
             h('div', { class: 'dshp-list-item-sub' },
-              (skill.description === '' ? skill.path : `${skill.description} · ${skill.size} B`))),
+              (skill.description === '' ? skill.path : skill.description + ' · ' + skill.size + ' B'))),
           h('div', { class: 'dshp-list-actions' },
             h('button', {
               class: 'dshp-btn dshp-btn-danger', type: 'button',
@@ -479,19 +461,9 @@ function SkillsManager(props: { t: Translate; notices: NoticeSource }): ReturnTy
 
 function UpdateChannel(props: { t: Translate; notices: NoticeSource }): ReturnType<typeof h> {
   const t = props.t
-  const [statusPhase, setStatusPhase] = useState<'loading' | 'error' | 'ready'>('loading')
-  const [status, setStatus] = useState<StatusPayload | null>(null)
+  const { state, setData, reload } = useAsyncData(fetchStatus)
   const [check, setCheck] = useState<UpdateCheckPayload | null>(null)
   const [busy, setBusy] = useState<'check' | 'switch' | null>(null)
-  const [error, setError] = useState('')
-
-  // 只为拿当前版本与最近一次更新信息；失败不阻塞整个子页
-  useEffect(() => {
-    void fetchStatus().then((result) => {
-      if (result.ok) { setStatus(result.data); setStatusPhase('ready') }
-      else { setError(result.error); setStatusPhase('error') }
-    })
-  }, [])
 
   const runCheck = useCallback(() => {
     if (busy !== null) return
@@ -501,41 +473,49 @@ function UpdateChannel(props: { t: Translate; notices: NoticeSource }): ReturnTy
       if (result.ok) {
         setCheck(result.data)
         if (result.data.error !== '') props.notices.report(result.data.error, 'failure')
-      } else props.notices.report(`${t('update.error')}：${result.error}`, 'failure')
+      } else props.notices.report(t('update.error') + '：' + result.error, 'failure')
     })
   }, [busy, props.notices, t])
 
   const switchChannel = useCallback((channel: 'stable' | 'beta') => {
     if (busy !== null) return
     const label = channel === 'stable' ? t('update.stable') : t('update.beta')
-    if (!window.confirm(t('update.switchConfirm', { channel: label }))) return
-    setBusy('switch')
-    // op:channel 立即下载应用；180s 超时见 api.ts 超时表
-    void updateOp({ op: 'channel', channel, apply: true }).then((result) => {
-      setBusy(null)
-      if (result.ok) {
-        setCheck(result.data)
-        props.notices.report(result.data.note ?? t('update.restartNote'), 'success')
-      } else props.notices.report(`${result.error}`, 'failure')
+    void confirmDialog(t('update.switchConfirm', { channel: label }), {
+      okText: t('update.switchTo', { channel: label }), cancelText: t('common.cancel'), danger: true,
+    }).then((ok) => {
+      if (!ok) return
+      setBusy('switch')
+      // op:channel 立即下载应用；180s 超时见 api.ts 超时表
+      void updateOp({ op: 'channel', channel, apply: true }).then((result) => {
+        setBusy(null)
+        if (result.ok) {
+          setCheck(result.data)
+          // 状态里的"最近一次更新结果"跟着变，避免两个子页显示不同版本
+          if (state.phase === 'ready') setData({ ...state.data, update: result.data })
+          props.notices.report(result.data.note ?? t('update.restartNote'), 'success')
+        } else props.notices.report(result.error, 'failure')
+      })
     })
-  }, [busy, t, props.notices])
+  }, [busy, t, props.notices, state, setData])
 
+  if (state.phase === 'loading') return h(Loading, { text: t('common.loading') })
+  if (state.phase === 'error') return h(ErrorLine, { label: t('update.error'), message: state.error, retryText: t('common.retry'), onRetry: reload })
+
+  const status: StatusPayload = state.data
   // 展示用的通道/版本信息：优先最新一次检查，其次 status 里的上次结果
-  const info: UpdateCheckPayload | null = check ?? status?.update ?? null
+  const info: UpdateCheckPayload | null = check ?? status.update ?? null
   const channelLabel = info === null
     ? '—'
     : info.channel === 'beta' ? t('update.beta') : t('update.stable')
 
   return h('div', { class: 'dshp-section' },
     h('div', { class: 'dshp-section-title' }, t('update.title')),
-    statusPhase === 'loading' ? h(Loading, { text: t('common.loading') }) : null,
-    statusPhase === 'error' ? h(ErrorLine, { label: t('update.error'), message: error, retryText: t('common.retry') }) : null,
-    status === null ? null : h('div', { class: 'dshp-row' },
+    h('div', { class: 'dshp-row' },
       h('span', { class: 'dshp-row-value' }, t('update.current', { version: status.plugin_version }))),
     info === null ? null : h('div', { class: 'dshp-row' },
       h('span', { class: 'dshp-row-value' },
         t('update.channel', { channel: channelLabel }),
-        info.localSha === '' ? '' : ` · ${t('update.localSha', { sha: info.localSha })}`)),
+        info.localSha === '' ? '' : ' · ' + t('update.localSha', { sha: info.localSha }))),
     info !== null && info.hasUpdate
       ? h('div', { class: 'dshp-row' }, h('span', { class: 'dshp-row-value' },
         t('update.hasUpdate', { version: info.remoteVersion, current: info.localVersion })))

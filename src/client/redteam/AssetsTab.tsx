@@ -39,6 +39,8 @@ export function AssetsTab(props: AssetsTabProps): ReturnType<typeof h> {
   const [web, setWeb] = useState<AnyRec[] | null>(null)
   const [openId, setOpenId] = useState<string | number | null>(null)
   const [detail, setDetail] = useState<AnyRec | null>(null)
+  /** 展开资产时命中的已知漏洞（版本 → CVE）。 */
+  const [cves, setCves] = useState<AnyRec[]>([])
   const sideCollapse = useCollapse('assets-side:' + String(eng))
   const seq = useRef(0)
 
@@ -92,12 +94,17 @@ export function AssetsTab(props: AssetsTabProps): ReturnType<typeof h> {
   }, [eng, view, cidr, props.refreshKey])
 
   const toggleRow = (id: string | number): void => {
-    if (openId === id) { setOpenId(null); setDetail(null); return }
+    if (openId === id) { setOpenId(null); setDetail(null); setCves([]); return }
     setOpenId(id)
     setDetail(null)
+    setCves([])
     if (eng === null) return
     void rtOp<AnyRec>('asset', { engagement: eng, id }).then((r) => {
       if (r.ok && r.data.asset !== undefined) setDetail(r.data.asset as AnyRec)
+    })
+    /* 版本 → CVE：展开即查，不用再点一次 */
+    void rtOp<AnyRec>('cveMatch', { assetId: id, engagement: eng, limit: 12 }).then((r) => {
+      setCves(r.ok && Array.isArray(r.data.items) ? (r.data.items as AnyRec[]) : [])
     })
   }
 
@@ -305,6 +312,16 @@ export function AssetsTab(props: AssetsTabProps): ReturnType<typeof h> {
           h('b', null, f.category || '—'),
           h('span', null, [f.vendor, f.product, f.version].filter(Boolean).join(' ') + (f.evidence ? '（' + f.evidence + '）' : '')),
           h(ProvTag, { t, p: f.provenance })))
+      }
+      /* 已知漏洞：探到版本就直接列出来，点 CVE 编号可搜详情 */
+      if (cves.length > 0) {
+        for (const c of cves) {
+          fpRows.push(h('div', { key: 'cve' + (c.cve || c.title), class: 'dshp-rt-kv' },
+            h('b', { class: 'dshp-rt-mono', style: { color: c.severity === 'critical' ? 'var(--dsw-alias-state-error-primary)' : undefined } },
+              (c.cve || t('rt.a.cveNoId')) + (c.exploit ? ' ⚡' : '')),
+            h('span', { title: String(c.title || '') }, String(c.title || '') + (c.matched_version ? '（' + c.matched_product + ' ' + c.matched_version + '）' : '')),
+            h('span', { class: 'dshp-rt-tag' }, String(c.severity || ''))))
+        }
       }
       for (const o of ((d.observations ?? []) as AnyRec[]).slice(0, 8)) {
         obsRows.push(h('div', { key: 'o' + (o.attr || '') + (o.value || '') + (o.collected_at || ''), class: 'dshp-rt-kv' },

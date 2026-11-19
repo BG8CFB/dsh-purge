@@ -83,6 +83,20 @@
     - id: dsh-purge-redteam-ui
       name: dsh-purge/redteam/ui
 
+    # 蓝队值守台：预设 + 技能落地（与红队平行，两条线互不可见）
+    - id: dsh-purge-blueteam
+      name: dsh-purge/blueteam
+
+    # 蓝队事实库（SQLite），数据在 $DSH_HOME/blueteam
+    - id: dsh-purge-blueteam-store
+      name: dsh-purge/blueteam/store
+      config:
+        root: !!js dshHomePath('blueteam')
+
+    # 蓝队 HTTP 桥 POST /blueteam/api（审批只在这里）
+    - id: dsh-purge-blueteam-ui
+      name: dsh-purge/blueteam/ui
+
 # ── D. 破甲覆盖行（两代通用；整 config 重述） ──
 # 沙箱默认全开（可被会话级预设覆盖；危险模式本身即无围栏，无需禁 fs-sandbox）
 - id: sandbox-policy

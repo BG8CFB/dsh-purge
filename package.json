@@ -1,6 +1,6 @@
 {
   "name": "dsh-purge",
-  "version": "2.1.0",
+  "version": "2.21.0",
   "description": "DSH 破甲插件（双路线）：DSH NEXT 走纯插件路线，老宿主走磁盘补丁路线；同一包运行时分派。",
   "type": "module",
   "main": "lib/index.js",
@@ -13,6 +13,10 @@
     "./redteam/store": "./lib/redteam/store.js",
     "./redteam/ui": "./lib/redteam/ui.js",
     "./redteam/tools": "./lib/redteam/tools.js",
+    "./blueteam": "./lib/blueteam/index.js",
+    "./blueteam/store": "./lib/blueteam/store.js",
+    "./blueteam/ui": "./lib/blueteam/ui.js",
+    "./blueteam/tools": "./lib/blueteam/tools.js",
     "./package.json": "./package.json",
     "./next": "./lib/next/index.js"
   },

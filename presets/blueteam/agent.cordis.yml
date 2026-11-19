@@ -1,0 +1,165 @@
+# 蓝队模式（blueteam）agent preset —— 防守方值守指挥。
+#
+# 与 redteam 预设是**两条平行线**：同一台机器上可以各用各的。
+# 一个会话只会拿到本预设里注册的工具：这里是 blueteam_*，不包含任何 redteam_*；
+# 反之红队会话也看不到 blueteam_*。项目（engagement）按 side 隔离，物理库也不同。
+#
+# 本文件只贡献 agent 平面的东西：人设、工具行、技能根。host 平面（SQLite / HTTP 桥 /
+# 预设注册）已经由 cordis.patch.yml 里的 dsh-purge-blueteam-{store,ui} 与
+# dsh-purge/blueteam（自举）提供。
+
+# ── 身份 ────────────────────────────────────────────────────────────────────
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: |
+      ## 你是防守方值守指挥（蓝队）
+
+      这场攻防里用户担任**蓝队**：你只做防守——资产与暴露面、检测建设、告警研判、事件处置、复盘整改。
+      用户可能同时还有别的红队项目，那是**另一条线**，你看不到、也不要提。
+
+      ## 指挥职责（硬约束）
+      你只做四件事：① 计划 ② 派活 ③ 研判回报 ④ 向用户汇报。**不自己扫端口、不自己封禁、不自己改生产配置。**
+      - 派活用原生 `subagent`，一次一个角色，最多并发 4 个。
+      - 每次派活第一行写 `blueRole: <code>`，code 只能是 `asset`、`detection`、`triage`、`responder`。
+      - 子智能体是叶子节点（maxDepth=1），任务书里写清"不要再往下派"。
+
+      ## 开局顺序（不要跳步）
+      1. `blueteam_digest` 看现状（资产 / 漏洞 / 数据源 / 告警 / 处置待办）。
+      2. 没资产 → 派 `asset`：`blueteam_asset_import` + 画像（criticality 必填）。
+      3. 没数据源 → 派 `detection`：`blueteam_logsource_add` 标 connected/offline；没规则就 `blueteam_detection_add`。
+      4. 有告警 → 派 `triage` 研判；P0 先处置。
+      5. 有已知漏洞 → 派 `asset` 推修复（`blueteam_vuln_list` → 修完 `blueteam_vuln_update` 带证据）。
+      6. 每条结论都要落库：**没落库 = 没发生**。
+
+      ## 处置边界（复述给子智能体）
+      - 研判必须给结论：真 / 假（必填原因）/ 重复 / 抑制；确认的告警必须挂事件。
+      - 高危动作（isolate_host / disable_account / rotate_credential / revoke_ticket）**只能 propose**，等用户在面板批准；你**没有**审批工具，不要假装批过。
+      - 执行后必须 `blueteam_action_verify`；没验证的动作不能把事件推进到 contained。
+      - 事件状态只能前进；P0/P1 关闭必须写复盘结论。
+
+      ## 什么时候跟用户说话
+      只有四种情况：① P0/P1 新事件；② 需要用户拍板（审批、范围、封禁对象）；③ 阶段推进；④ 真实卡点。
+      其余时候安静干活；用户问进度用 `blueteam_digest` 的真实数字回答，不编。
+
+# 锚点门：bootstrap 阶段限输出，避免首轮空转。
+- id: anchor-gate
+  name: ./anchor-gate.mjs
+  config:
+    anchorGate: true
+    maxBootstrapSteps: 2
+    promoteAfterFirstResponse: true
+    bootstrapMaxTokens: 8192
+    instructionHint: true
+
+- id: blueteam-tools
+  name: dsh-purge/blueteam/tools
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+# ── shell ───────────────────────────────────────────────────────────────────
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
+# ── filesystem ──────────────────────────────────────────────────────────────
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+
+- id: tool-jobs
+  name: '@deepseek-ai/dsh-tool-jobs'
+
+# ── skills ──────────────────────────────────────────────────────────────────
+# 只扫 $DSH_HOME/skills（用户自己配的那份）与本包的 $DSH_HOME/blueteam/skills。
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    includeDefaultRoots: false
+    customSkillDirs:
+      - !!js dshHomePath('skills')
+      - !!js dshHomePath('blueteam/skills')
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+# ── goals ───────────────────────────────────────────────────────────────────
+- id: command-goal
+  name: '@deepseek-ai/dsh-command-goal'
+
+- id: tool-goal
+  name: '@deepseek-ai/dsh-tool-goal'
+
+# ── compaction（与红队同构：pruner 与 compaction 必须同 realm） ──────────────
+- id: compaction
+  name: cordis:group
+  group: true
+  isolate:
+    compaction: true
+    toolResultPruner: true
+  config:
+    - id: compaction-basic
+      name: '@deepseek-ai/dsh-compaction-basic'
+
+    - id: command-compact
+      name: '@deepseek-ai/dsh-command-compact'
+
+    - id: tool-result-pruner
+      name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+      config:
+        thresholdChars: 8192
+        headChars: 4096
+        tailChars: 1024
+
+# ── 派活 ────────────────────────────────────────────────────────────────────
+- id: delegation
+  name: cordis:group
+  group: true
+  isolate:
+    workflowEngine: true
+  config:
+    - id: tool-subagent-control
+      name: '@deepseek-ai/dsh-tool-subagent-control'
+      disabled: false
+
+    - id: tool-subagent
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: false
+      config:
+        provider: spawn
+        toolName: subagent
+        modelSelection: true
+        maxDepth: 1
+
+    - id: tool-subagent-fork
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: false
+      config:
+        provider: fork
+        toolName: subagent_fork
+
+# ── 其余模型面工具 ───────────────────────────────────────────────────────────
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+- id: tool-web
+  name: '@deepseek-ai/dsh-tool-web'
+  config:
+    fetch: true
+    searchTimeoutMs: 60000

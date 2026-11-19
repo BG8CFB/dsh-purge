@@ -6,8 +6,8 @@ import { useEffect, useState } from 'react'
 import { h, type NoticeSource } from '../shared/ui.ts'
 import { rtOp } from './api.ts'
 
-/** 宿主 locale 绑定函数（与 index.ts 的 Translate 同构）。 */
-export type Translate = (key: string, params?: Record<string, string | number>) => string
+/** 宿主 locale 绑定函数：唯一定义在 locale.ts，这里转出以保持既有 import 路径可用。 */
+export type { Translate } from '../locale.ts'
 
 /** 子页签公共 props（RedteamTab 分发）。 */
 export interface RtTabProps {

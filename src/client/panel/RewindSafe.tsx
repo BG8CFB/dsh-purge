@@ -8,8 +8,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { h, type NoticeSource } from '../shared/ui.ts'
 import { applyRewind, fetchRewindOptions } from '../shared/api.ts'
 
-/** 翻译函数（由 locale 服务的 bind 产物传入）。 */
-export type Translate = (key: string, params?: Record<string, string | number>) => string
+/** 翻译函数：唯一定义在 locale.ts，这里转出以保持既有 import 路径可用。 */
+export type { Translate } from '../locale.ts'
 
 export interface RewindSafeProps {
   t: Translate

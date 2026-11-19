@@ -65,7 +65,12 @@ await check("registers persona and protocol sections", () => {
   const persona = ctx.sections.find((s) => s.name === "dsh-purge:persona");
   assert.equal(persona.order, 1);
   assert.equal(persona.interpolate, false, "persona must opt out of strict interpolation");
-  assert.equal(persona.text, "TEST-PERSONA");
+  /* 2.12 起 text 是函数：只有红队会话才返回人格，普通会话返回空串（由 assemble 剔除）。 */
+  assert.equal(typeof persona.text, "function", "persona text must be context-gated");
+  const redteam = persona.text({ agent: { session: { header: {}, projectionValues: { agentPreset: "redteam" } } } });
+  const plain = persona.text({ agent: { session: { header: {}, projectionValues: { agentPreset: "default" } } } });
+  assert.equal(redteam, "TEST-PERSONA", "red-team session must get the persona");
+  assert.equal(plain, "", "plain session must not get the persona");
 });
 
 await check("registers assemble + approval + pre-execute + post-execute listeners", () => {

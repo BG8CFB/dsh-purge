@@ -28,6 +28,15 @@ dsh plugin --profile web add dsh-purge
 
 ## 使用
 
+**先读 [docs/howto-zh.md](docs/howto-zh.md)**（3 分钟上手：怎么新建红队会话、智能体怎么被调用、绑定语义、标准五步）。
+
+作战与防守的业务基准：
+
+- [docs/redteam-playbook.md](docs/redteam-playbook.md)：红队作战手册（授权基准、五角色、攻击链与 ATT&CK、与蓝队交战、记分、证据、沉淀）
+- [docs/blueteam-playbook.md](docs/blueteam-playbook.md)：蓝队防守手册（防守优势、五阶段、告警链路与实时性、名单体系、自伤约束、蓝队计分、智能体设计）
+- [docs/blueteam-design.md](docs/blueteam-design.md)：**蓝队模式设计与实现说明**——两条平行线的定位、数据模型、告警/事件/处置状态机、四时钟与 SLA、红蓝交手剧本、交互流程、遗漏清单（G1–G30）
+- [docs/howto-blue.md](docs/howto-blue.md)：**蓝队值守 3 分钟上手**（建项目 → 进值守 → 开局三件事 → 研判/处置/交班/复盘）
+
 ```sh
 # 聊天命令（两代一致）
 /purge status     # NEXT：注入来源/宿主版本/开关；legacy：补丁清单与进度
@@ -42,7 +51,24 @@ dsh-purge --status | --apply | --revert | --uninstall | --edit
 purge_status
 ```
 
-**面板（NEXT 官方形态）**：设置页「dsh-purge」（人格编辑 / 规则集 / 技能管理 / 更新通道）+ 右侧栏「dsh-purge」页签（状态总览 / 回退 / 演练台入口）+ 输入框回退按钮。演练台（资产测绘 / 环境适配 / 智能体 / 会话隧道 / 漏洞战果 / 攻击链 / 得分 / 报告 / 知识库 / 技能库）在右侧栏独立页签，打开即用。
+**面板（NEXT 官方形态，v2.2.0 起）**：主工作台是左侧栏「破甲」全局面板（`main`，root 作用域，与「插件 / 自动化任务」并列）——三个页签：**总览**（开工检查：路线 / 宿主 core / 注入来源与字节 / 人格文件 / 版本，以及项目选择与进入演练）、**红队演练台**（全宽工作台：项目中心 / 资产测绘 / 环境适配 / 智能体 / 会话隧道 / 漏洞战果 / 攻击链 / 得分 / 报告 / 知识库 / 技能库）、**蓝队值守台**（防守侧：项目中心 / 值守总览 / 资产与暴露面 / 漏洞 / 告警台 / 事件处置 / 检测覆盖 / 智能体 / 报告与复盘）。
+
+**全局配置只在一个地方**：人格编辑 / 规则集 / 技能 / 更新通道都在「设置 → 破甲」分区（右下角头像 → 设置）；破甲面板右上 ⚙ 一键深链过去。以前面板里还挂着第三个页签渲染同一份设置，等于一张表单两处入口，已删除。
+
+**新会话同样可用**：`main` 是 root 作用域，不需要 on-screen 会话；右侧栏页签是 session 作用域，空会话时不渲染，不能当作主入口。
+
+**项目（engagement）= 靶标工作区**（v2.3.0）：
+
+| 层 | 范围 | 内容 |
+| --- | --- | --- |
+| 项目 | 每项目独立目录 + SQLite | 资产 / 端口 / 指纹 / 漏洞 / 凭据 / WebShell / 隧道 / 攻击链 / 得分 / 截图 / 报告 |
+| 全局 | 跨项目共享 | 知识库（POC/模板）、技能库、环境适配、智能体角色提示词模板 |
+
+演练台第一页是**项目中心**：卡片显示每个项目的状态、授权范围、阶段得分进度、资产/漏洞/得分、最近活动、绑定会话数；新建项目（名称 + CIDR + 目标说明）后直接进入工作台。工作台顶部固定"项目头"，显示当前项目与本会话的绑定状态（绑定/解绑），页签分为**项目组**（项目中心 / 总览 / 资产测绘 / 智能体 / 会话隧道 / 漏洞战果 / 攻击链 / 得分目标 / 报告）与**全局组**（知识库 / 技能库 / 环境适配）。
+
+会话绑定落盘在 `$DSH_HOME/redteam/session-bindings.json`（键 = 根会话 id，子智能体共享父会话的绑定，500 条 FIFO）。绑定后本会话的红队工具只读写该项目，多会话并行不会串库；右栏「dsh-purge」页签可随时切换/解绑本会话的绑定。
+
+会话内另有两个轻量入口：右侧栏「dsh-purge」页签（本会话进度 + 绑定/解绑 + 回退一轮 + 打开演练台）与输入框「↩ 回退」按钮；会话头「dsh-purge」徽章直接跳到全局面板。确认类操作（删项目 / 删规则 / 切通道）统一走插件自己的确认框，不再用宿主原生 `window.confirm`。
 
 **红队模式**：会话预设选「红队模式」→ 指挥智能体先 `redteam_preflight` 预检 → 开靶（`redteam_engagement_open`）→ 按五角色（recon / assess / vuln-scan / exploit / internal）派活。新工具：
 
@@ -51,6 +77,16 @@ purge_status
 - `redteam_asset_next`：下一条该测什么 + 该资产指纹命中的知识库 POC 推荐。
 
 会话与靶标的绑定落盘保存，宿主重启后不用重新 open/bind。
+
+**蓝队值守台（v2.19.0，与红队并行的第二条线，只做技术面）**：一次攻防里你只担任一侧——担任蓝队就从「蓝队值守台」建防守项目（责任区），它有自己的数据根 `$DSH_HOME/blueteam`、自己的会话绑定、自己的技能与工具（`blueteam_*`）、自己的预设（**蓝队模式**：防守指挥 + asset / detection / triage / responder 四个技术角色）。红队那条线一行不受影响，两边数据互不可见。
+
+- 面板与红队演练台**同构**：项目头（名称/侧别/模式/SLA/范围/本会话绑定）+ 项目下拉 + 实时角标 + 版本 + 刷新 + 项目组/全局组页签 + 底部统计。
+- 项目组九页：项目中心 / 值守总览（KPI 磁贴 + 下一步建议 + 风险分布）/ **资产测绘**（左分组 + 右资产表，点行展开画像 / 暴露面 / 基线）/ 智能体（四个角色与提示词）/ 告警研判（队列 + 详情 + 升事件）/ **漏洞**（左列表 + 右详情，与红队「战果」镜像）/ 事件处置（动作 + 审批 + 验证 + 时间线）/ 检测覆盖（数据源 + 规则 + ATT&CK 三色矩阵）/ 报告与复盘（技术复盘 + 管理层态势 + **红蓝对账**）。
+- 全局组两页：技能库（随包技术技能）/ 环境适配（数据根 / 库路径 / 预设状态 / 版本）。
+- 不做排班、交接、变更窗口与记分：这些是人的管理流程，不是 AI 能参与的技术活；指标（MTTD/MTTR/覆盖/误报）只作观测值展示。
+- **AI 不能自己批自己**：`isolate_host` / `disable_account` / `rotate_credential` 等高危动作只能"提"，批准/强制执行只存在于面板。
+- **红蓝对账**是唯一的跨线通道：由你在面板触发，红队库**只读**打开，逐条判 命中 / 迟报 / 漏报 / 不可判定，漏报进蓝队记分板。
+- 快速上手见 [docs/howto-blue.md](docs/howto-blue.md)。
 
 ## 工作原理
 
@@ -79,12 +115,14 @@ purge_status
 node --check lib/index.js && node --check lib/legacy/core.js && node --check lib/next/index.js
 node --input-type=module -e "import './lib/index.js'"
 node test/next-rules.mjs        # NEXT 路线测试套（20 项）
-npm run build                    # 前端 tsdown 构建 + externals 校验
+node test/blue-store.mjs         # 蓝队事实库 / 状态机 / 审批闸门 / 对账（33 项）
+npm run build:client             # 前端 tsdown 构建 + externals 校验
+node test/client-render-smoke.mjs # 客户端渲染冒烟（apply + 各槽位首屏渲染，含蓝队页签）
 ```
 
 ## 目录结构
 
-`lib/index.js` 薄入口（代际分派）；`lib/next/` NEXT 纯插件路线；`lib/legacy/` 磁盘补丁路线；`lib/shared/` 两路线公共设施（主目录解析/原子写/加密槽/override 状态机）；`lib/redteam/` 演练台（两路线共用）；`presets/redteam/` 红队预设；`skills/redteam/` 随包技能；`src/` 前端源码（tsdown 双 face 构建）。
+`lib/index.js` 薄入口（代际分派）；`lib/next/` NEXT 纯插件路线；`lib/legacy/` 磁盘补丁路线；`lib/shared/` 两路线公共设施（主目录解析/原子写/加密槽/override 状态机）；`lib/redteam/` 红队演练台；`lib/blueteam/` 蓝队值守台（schema/store/tools/ui/预设自举，与红队平行）；`presets/{redteam,blueteam}/` 两套预设；`skills/{redteam,blueteam}/` 随包技能；`src/client/{redteam,blue}/` 两套前端；`src/` 前端源码（tsdown 双 face 构建）。
 
 ## 更新
 

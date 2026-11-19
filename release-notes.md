@@ -1,3 +1,367 @@
+# 2.21.0
+
+## 中文
+
+### 蓝队界面：直接复用红队的组件与样式（不是"照着写"，是同一套）
+
+上一轮只做到"结构对齐"，视觉还是自己写的 inline 样式，所以看着不像。这一轮把蓝队的每个页面**改成红队演练台同一批组件与 class**：
+
+- 新增 `src/client/blue/kit.tsx`：`Tile / Bar / Tag / KV / Field / Block / Split`，全部是对红队 `bits.tsx` 与 `dshp-*` 类的薄封装，不引入新样式。
+- **项目中心**：改用红队的 `dshp-pj-head / dshp-pj-title / dshp-pj-sub / dshp-pj-grid / dshp-pj-card / dshp-pj-card-head / dshp-pj-card-name / dshp-pj-meta / dshp-pj-chips / dshp-pj-stats / dshp-pj-actions` 卡片布局，过滤子页签也是红队同款 `dshp-rt-subtabs/subtab`。
+- **总览**：改用红队 `dshp-rt-ov-grid` 四宫格 + `dshp-rt-ov-tile / ov-title / ov-big / ov-sub / ov-bar`；磁贴可点跳转。
+- **告警研判 / 漏洞 / 事件处置 / 智能体 / 报告 / 技能库**：统一 `dshp-rt-split`（左列表 + 右详情）+ `Block`（红队 `Section`，`dshp-rt-sec` 标题带计数/右侧操作）+ `KV` 键值行 + `dshp-rt-tag` 字牌。
+- **资产测绘**：左分组 + 右表格 + 行内展开；容器改用 `dshp-rt-split`。
+- **检测覆盖**：数据源 / 规则 / 矩阵三个 `Block`，矩阵格子用 `dshp-rt-tag-live / -warn / -passive` 三色。
+
+视觉结果：卡片圆角、标题层级、字牌配色、KPI 字号、进度条、分栏比例、按钮主次，都和红队演练台一致（同一份 `styles.ts`）。
+
+### 测试
+
+`npm run build:client` 通过；`node test/blue-store.mjs` 37 项；渲染冒烟 13 个渲染点 0 异常。
+
+# 2.20.0
+
+## 中文
+
+### 蓝队界面按红队演练台同构重做
+
+之前蓝队虽然功能齐，但布局是"一页一个样"。本轮按**红队演练台的骨架**统一：
+
+- **项目头**：名称 / 侧别徽章 / 模式 / SLA / 责任范围 / 创建时间 / 本会话绑定（绑定·解绑）；
+- **头部工具条**：项目下拉 + 实时角标（SSE）+ 版本 + 刷新；
+- **页签分组**：项目组（项目中心 / 值守总览 / 资产测绘 / 智能体 / 告警研判 / 漏洞 / 事件处置 / 检测覆盖 / 报告与复盘）+ 全局组（技能库 / 环境适配）；
+- **分页签错误边界**：某页渲染出错只降级该页，给"返回项目中心"；
+- **底部统计**：资产 / 开放端口 / 漏洞 / 未研判 / 在处置 / 暴露面 / 生效规则 + SQLite 库名。
+
+### 页面交互对齐
+
+- **资产测绘**：左栏按 外网/内网 + 网段 分组（带计数），右栏资产表；点行展开画像（责任人/部门/业务/重要级/环境/分级）+ 该资产暴露面 + 基线登记。
+- **漏洞**：左列表（状态/严重级/搜索）+ 右详情（字段、修复证据、确认/修复/误报动作、登记表单）。
+- **告警研判**：左队列 + 右详情（实体/资产/规则/SLA/合并条数），j/k/f/p/i 键盘操作，升事件 / 误报（带原因）/ 重复 / 抑制。
+- **事件处置**：事件列表 + 时间线 + 处置动作卡（批准 / 拒绝 / 执行 / 验证 / 回滚）+ 状态推进 + 复盘结论。
+- **总览**：KPI 磁贴可点跳转（未研判/超时/P0/在处置/待批/待验证/待修漏洞/暴露面/覆盖/MTTD/MTTR/误报）+ 下一步建议 + 风险分布 + 最近变更。
+
+### 新增全局页
+
+- **技能库**：读出随包 7 个蓝队技术技能（左列表 + 右内容）。
+- **环境适配**：数据根 / 项目数据目录 / SQLite 路径 / 项目数 / 插件版本 / **预设注册状态** / 技能目录 / 关键计数。
+
+### 后端
+
+- 新增 op：`skillCatalog`、`envInfo`（后者在 HTTP 层合并 `ctx.blueteamPreset.status()`）。
+- 新增 op：`assetAdd`（单条加资产）。
+
+### 测试
+
+`node test/blue-store.mjs` 37 项通过；`node test/client-render-smoke.mjs` 13 个渲染点 0 异常；`npm run build:client` 通过。
+
+# 2.19.0
+
+## 中文
+
+### 蓝队按"技术面"重构：去掉排班/交接/变更/记分
+
+第一版把 SOC 的管理流程也搬进了插件（班次、交接单、变更窗口、蓝队记分板）。这不是要的东西：**AI 参与不了排班，也不该由插件记这些账**。本轮全部移除：
+
+- 删除表：`shift` / `handover` / `change_window`；
+- 删除工具：`blueteam_shift_open` / `blueteam_shift_close` / `blueteam_handover_write` / `blueteam_score_list`；
+- 删除页签：值勤交接、得分；
+- 删除方法：`openShift/closeShift/writeHandover/ackHandover/blueScore/addChangeWindow`。
+
+保留并强化的技术面（与红队同构）：
+
+- **漏洞清单**（新）：`blueteam_vuln_add/list/update`，修完必须带证据；与红队「漏洞战果」镜像。
+- **智能体页**（新）：四个防守角色 + 各自提示词，可改可恢复。
+- 资产与画像 / 暴露面 / 基线 / 数据源台账 / 检测规则 / ATT&CK 覆盖矩阵 / 告警研判 / 事件处置（影响面 + 回滚 + 审批 + 验证）/ 红蓝只读对账。
+- 指标（MTTD / MTTR / 覆盖 / 误报）只作观测值，不再打分排名。
+
+面板 9 页：项目中心 / 总览 / 资产与暴露面 / 漏洞 / 告警台 / 事件处置 / 检测覆盖 / 智能体 / 报告与复盘。
+
+### 工具（32 个）
+
+`blueteam_asset_add` 与漏洞三件套加入；`blueteam_digest` 的"下一步"改为技术建议（告警 / 漏洞 / 暴露面 / 规则盲区）。
+
+### 测试
+
+`node test/blue-store.mjs` → **37 项**（新增：漏洞去重更新、修复证据、digest 漏洞统计；移除班次/记分断言）。
+
+### 文档
+
+- `docs/howto-blue.md` 重写为技术流程（建项目 → 导资产 → 接数据源/写规则 → 研判 → 处置 → 漏洞 → 对账）。
+- `docs/blueteam-design.md` 增加「v2.19 修订：砍掉管理面，只留技术面」。
+
+# 2.18.0
+
+## 中文
+
+### 蓝队值守台：与红队并行的第二条线（本轮核心）
+
+**定位**：一次攻防里你只担任一侧。担任红队 → 建红队项目、用 `redteam_*`、看红队演练台；
+担任蓝队 → 建防守项目、用 `blueteam_*`、看蓝队值守台。两条线的数据根 / 会话绑定 / 工具集 /
+预设 / HTTP 桥 / 面板页签全部各一套，**注册层隔离**（蓝队会话里根本没有红队工具，反之亦然）。
+
+### 事实库（`lib/blueteam/`）
+
+- `BlueteamStore extends RedteamStore`（`side=defense`）：共享资产/端口/指纹表，追加 16 张蓝队表：
+  `asset_profile / exposure / baseline_check / log_source / detection_rule / alert / incident /
+  incident_timeline / response_action / watchlist / change_window / shift / handover /
+  reconcile / reconcile_item`。
+- 基类只加四个扩展点（红队默认路径零变化）：`roleTitles()` / `defaultPrompts()` /
+  `extendDb()` / `seedScorePoints()`。
+- 告警四闸：白名单 → 变更窗口 → 10 分钟去重合并 → 风暴折叠（同一规则 60s 超 100 条只留代表 + meta 告警）。
+- 事件四时钟：`first_seen → triaged_at → contained_at → recovered_at`；MTTD/MTTR 由中位数计算。
+- 状态机守卫：事件只能前进；`contained` 前必须有**已验证**的处置动作；P0/P1 关闭必须写复盘结论。
+- 计分板八项（检测覆盖 / MTTD / MTTR / 暴露面收敛 / 基线 / 误报 / 自伤 / 漏报），每项可解释到 SQL。
+
+### 审批与自伤防线
+
+- 高危动作（`isolate_host` / `disable_account` / `rotate_credential` / `revoke_ticket`）只能 propose；
+  **`approve/reject/force` 只存在于 `/blueteam/api`，工具集里没有** —— AI 不能自己批自己。
+- 高危必须给 `impact + blast_radius + rollback_plan`；执行后必须 `verify`（贴证据）；
+  30 分钟冷静期内可一键回滚；`emergency`（先斩后奏）必须写理由，否则计入自伤。
+
+### 红蓝对账（唯一跨库通道）
+
+- `runReconcile` 以 `readOnly: true` 打开红队库，逐条判断红队攻击步骤有没有被蓝队记录到：
+  `matched / late / missed / unverifiable`（±15 分钟窗口 + 实体匹配）。
+- 只在面板触发；模型只有 `blueteam_reconcile_list`（只读结果）。漏报进蓝队记分板扣分。
+
+### 工具 / 预设 / 技能
+
+- 32 个 `blueteam_*` 工具（项目 / 资产 / 画像 / 暴露面 / 基线 / 数据源 / 规则 / 覆盖 / 告警 / 事件 / 动作 / 名单 / 班次 / 交接 / 得分 / 报告 / 对账）。
+- 新预设「蓝队模式」：值守指挥 + `asset` / `detection` / `triage` / `responder` 四个执行角色；
+  随包 8 个 SOC 技能（值守 / 研判 / 处置 / 基线 / 检测 / 资产 / 交接 / 对账）。
+- 数据根 `$DSH_HOME/blueteam`（`BLUETEAM_HOME` 覆盖），执行 `rm -rf` 即净；红队目录不受影响。
+
+### 面板
+
+主面板新增第三个页签 **蓝队值守台**：项目中心 / 值守总览（下一步建议）/ 告警台（队列 + 研判 +
+升事件）/ 事件处置（动作 + 审批 + 验证 + 时间线）/ 资产与暴露面（画像 / 暴露面 / 基线 / 名单 /
+变更窗口）/ 检测覆盖（数据源 + 规则 + ATT&CK 三色矩阵）/ 值勤交接（班次 + 交接单）/ 得分 /
+报告与复盘（含红蓝对账）。
+
+### 测试
+
+- `node test/blue-store.mjs`：33 项（元数据 / 资产画像 / 基线自动暴露面 / 覆盖矩阵 / 四闸 /
+  研判守卫 / 事件状态机 / 审批闸门 / 班次交接 / 记分 / 只读对账）。
+- `node test/client-render-smoke.mjs`：新增蓝队页签渲染点（13 个，0 异常）。
+
+### 文档
+
+- `docs/howto-blue.md`：蓝队值守 3 分钟上手。
+- `docs/blueteam-design.md`：两条平行线定位、数据模型、状态机、红蓝交手剧本（12 个场景）、
+  交互流程与遗漏清单。
+
+# 2.17.0
+
+## 中文
+
+### 漏洞库：版本 → CVE 自动关联（本轮核心）
+
+- 新增**版本匹配引擎** `lib/redteam/version-match.js`：解析厂商版本号（含 rc/beta/SNAPSHOT 预发布权重），
+  支持 `<`、`<=`、`>`、`>=`、`=`、`*`、`8.5.x` 与逗号组合范围。单测 11/11。
+- 新增**内置漏洞库** `lib/redteam/cve-seed.js`：47 条护网高频条目（Weblogic / Shiro / Fastjson / Struts2 /
+  Log4j2 / Tomcat / Apache / Redis / Jenkins / GitLab / Confluence / Zabbix / Nacos / Grafana / Harbor /
+  F5 / Citrix / Exchange / 泛微 / 致远 / 用友 / 通达 / Docker / K8s / runc）。
+- 知识库 schema 增 `cve` 表（product / versions / version_min / version_max / severity / exploit / ttp），
+  首次打开自动灌种子，幂等。
+- 新工具：`redteam_cve_match`（按 asset_id 或 product+version 匹配）、`redteam_cve_search`（按产品/版本/CVE/严重级查）。
+- `redteam_asset_get` 与 `redteam_asset_next` 自动附 `known_cves`：探到版本就直接给出该版本已知漏洞，不用额外调用。
+- 资产测绘页展开资产即显示命中的 CVE（严重级着色、⚡ 标记有公开 EXP、括号内标出匹配的产品与版本）。
+
+### 用法
+
+```
+1. 探到指纹：redteam_scan_import / redteam_asset_test → fingerprint(product=weblogic, version=12.2.1.3)
+2. 直接看：redteam_asset_get { id } → known_cves [...]
+3. 或按需查：redteam_cve_match { product: "fastjson", version: "1.2.47" }
+4. 落成待验证：redteam_vuln_add { cve, title, severity }（状态 candidate）
+```
+
+版本范围是近似匹配，`verified=0`，真实利用前回查官方公告。
+# 2.16.0
+
+## 中文
+
+- **红队 UI 只在演练会话显示**：客户端新增会话级判定（投影 agentPreset → cwd 兜底）：
+  - 会话头红队徽章：非红队预设且未绑定项目 → **整个不渲染**；
+  - 右栏「dsh-purge」页签：普通会话只显示一句「这不是演练会话」+「进入演练」按钮，不铺得分/资产；
+  - 输入框「红队对话」：保留（这是从普通会话进入演练的入口）。
+- 判定顺序：`sessions` 快照 `byId[id].projectionValues.agentPreset` → `projectionsBySession[id]` → cwd 含 `redteam/engagements`。
+- 级别分工最终定稿：
+  | 级别 | 内容 |
+  | --- | --- |
+  | 会话 | 红队徽章（绑定/得分/在跑）、右栏「本会话演练」、输入框「红队对话」、回退 |
+  | 全局 | 项目中心、开工检查、知识库、技能库、环境适配、人格与规则 |
+# 2.15.0
+
+## 中文
+
+### 级别划分（这次的核心）
+
+| 级别 | 内容 | 位置 |
+| --- | --- | --- |
+| 会话级 | 本会话绑定哪个项目、该项目得分/阶段/在跑智能体、最近命中、回退 | 会话头红队徽章 + 右栏「dsh-purge」页签 + 输入框「红队对话」 |
+| 全局级 | 项目中心（建/删/归档）、开工检查、知识库、技能库、环境适配、人格与规则 | 破甲全局面板（左侧栏图标） |
+
+- **会话头新增红队状态徽章**：`红队 · 检察院 · 12 分`（未绑定时显示「红队 · 未绑定」），15 秒刷新；
+  悬停显示项目/得分/在跑智能体，点击打开破甲面板。
+- **右栏页签改为「本会话演练」**：得分 / 阶段数 / 在跑智能体 / 最近 3 条命中；
+  插件自身的路线、注入字节等自检信息折叠进 `<details>`，不再抢版面。
+- 没有下沉的东西（有意留在全局）：项目中心（一个项目的资产/漏洞是跨会话视角）、
+  知识库（跨项目复用）、人格与规则（全局配置，会话级改会造成不一致）。
+# 2.14.0
+
+## 中文
+
+- **取消“新建会话自动填开场白”**：删掉 `startDrill` 旧入口与 `drillPromptOf` 模板。
+  现在点「红队对话」/「转红队」只做两件事——切到项目工作区、建/复用空白红队会话，
+  输入框保持空白，用户自己说第一句。
+- 与取消项一起清理的：`apiGet` 依赖（last-user 交接语）、PurgeMain / RedteamTab 的 startDrill 属性。
+- 最终交互只剩三步：破甲建项目 → 工作区出现该项目 → 点「红队对话」进标准红队模式。
+# 2.13.0
+
+## 中文
+
+- **新建红队会话自动填好开场白**：点「红队对话」（或项目卡片的「新建对话」）后，
+  新会话的输入框里直接出现该项目的演练开场白（项目名 + 授权范围 + 五步执行顺序），回车即开工。
+- 新建会话改用单条 `startSession(workspaceId, { agentPreset, prompt })`：同时完成切工作区、建会话、填草稿。
+- 普通会话「转红队」在抓不到上一条需求时，回退为该项目开场白，避免开出空白会话。
+# 2.12.0
+
+## 中文
+
+- **普通会话不再出现破甲**：人格段与能力协议段改为按会话门控——只有「红队模式」会话才注入，
+  非红队会话返回空串并在 assemble 阶段剔除空段。宿主「+」新建的普通会话保持原样。
+  （根因：`systemPrompt.section` 之前是无条件全局注册，所以任何新会话都被塞进破甲人格。）
+- **「转红队」替代“新建对话”**：宿主没有运行时切换会话预设的 API（`agentPreset` 只在 create 时传入），
+  因此普通会话里的按钮改为：新建一个红队会话，并抓取当前会话最后一条用户消息作为交接语带过去，
+  用户不用重新描述需求。已绑定项目的红队会话里，按钮仍是“新建红队对话”。
+- 按钮文案随会话状态切换：「转红队」/「红队对话」，悬浮提示写清目标项目。
+# 2.11.1
+
+## 中文
+
+- 指挥台就绪检查新增「会话/工作区服务」一项：`uiWorkspace` / `workspaces` / `layout` 三个客户端服务
+  是否已就绪。以后"点按钮没反应"能一眼看出是不是宿主服务没起来，不必再猜。
+- 红队会话创建失败时弹出原因，不再静默。
+# 2.11.0
+
+## 中文
+
+- **修复「红队对话」点了没反应**：根因是 apply 阶段一次性 `ctx.get("uiWorkspace"/"workspaces")`，
+  而这两个服务由 ui-workspace / workspace-controller 在各自 apply 时 mint，加载顺序不保证；
+  取不到就永久是 undefined，所有新建会话/建工作区的路径静默返回 false。
+  现在改为**惰性获取 + 最多 2 秒轮询**（`requireService`），并在失败时弹出提示，不再静默。
+- 没有把服务写进 `inject` 声明：服务名一旦对不上，整个插件会 PENDING、破甲面板直接消失（风险太大）。
+- `ensureWorkspace` 里的工作区列表快照按 `items` 数组解析（原来按 `byId` 读，恒为空，导致每次都重新 create）。
+- 新建红队会话失败时会提示「宿主没有可用的工作区/会话服务」，并保留宿主日志线索。
+# 2.10.0
+
+## 中文
+
+- **多项目选择**：输入框右侧的「红队对话」按钮在项目多于一个时，点击弹出项目列表（当前会话绑定的那个标 ●，未建工作区的标「将自动创建」），点哪个就在哪个项目里新建演练会话；只有一个项目时直接进入，不弹菜单。
+- **移除侧栏「红队」小按钮**：它挂在「新建会话」行里、位置靠上且判定为“当前项目”，既不好看也说不清去向。宿主的工作区行（WorkspaceBrowser）没有向插件暴露任何槽位，行内按钮只能改宿主前端，所以撤掉。
+- 「红队对话」按钮的悬浮提示会写清目标项目：单项目时为「新建红队对话（检察院）」，多项目时为「（当前 检察院，点击选择项目）」。
+# 2.9.0
+
+## 中文
+
+- **侧栏「新建会话」行旁边新增「红队」按钮**（`sidebar.session.action` HOC）：不再需要先打开破甲面板——点它就用**当前项目**的工作区开一个红队模式会话；没有项目时自动打开指挥台。
+  - 宿主那颗「新建会话」仍然用设置里的默认预设（PTC），插件改不了它的默认值；这颗红队按钮是并列的等价入口。
+- **修复删除项目后列表不消失**：`ProjectsTab` 删除成功后立即从本地列表移除并触发 `onChanged`（重拉名册与快照），不再需要手动刷新。
+
+# 2.8.0
+
+## 中文
+
+- **两级知识库**：项目库（`<项目目录>/assets.db` 的 `poc` 表 + `pocs/`）与全局库（`knowledge.db`）并存。
+  - `redteam_poc_add` 默认 `scope=project`（随项目走，删项目即删），`scope=global` 才进全局；
+  - `redteam_poc_search` 默认 `scope=all`（先项目、再全局，按 code 去重），结果带 `scope`；
+  - 知识库页签新增「本项目 / 全局 / 全部」切换，写操作按条目所属 scope 路由。
+- **新建项目可指定目录**：表单新增目录输入 + 宿主目录选择器；不填就用默认目录。资产库、agents、runs、reports、shots、attack-files、项目级 POC 全部落在该目录。
+- **工作区创建加 2 秒重试并透出错误**：项目创建时若 `ui-workspace` 尚未就绪，会自动重试；仍失败则弹通知说明原因，不再静默「将自动创建」。
+- 新增 `docs/redteam-audit.md`：预设/人格/6 份角色提示词/57 个工具/23 个技能/两级知识库/宿主限制的体检清单。
+
+# 2.7.0
+
+## 中文
+
+- **修复英文回退（main.enter / main.newSession / main.deleteProject 等直接显示 key）**：根因是两个命名空间混用——`ProjectsTab`/`RedteamTab` 用红队词典（RT）却引用主词典（NS）的 key，`PurgeMain` 反过来。现在两套词典各保留一份共用 key（22 个），并加了 i18n 扫描脚本核对：**缺失 0，zh/en key 集合完全对称**。
+- **会话内「＋」新建红队对话**：新增 `conversation.input.right` 按钮（order 90），仅在本会话已绑定项目时出现；点一下就在同一项目工作区开新的红队会话，不必回破甲面板。
+- **知识库定位显性化**：页签顶部写明「全局知识库：跨项目共享、可按来源靶标筛选；项目内资产/漏洞不在其中；检索走 FTS5，无需向量模型」。
+- 项目卡片与指挥台的「工作区」状态、目录、删除按钮文案全部中文化。
+
+# 2.6.0
+
+## 中文
+
+- **「进入演练」取代「开始演练 + 回车」**：`enterDrill` 用 `uiWorkspace.openWorkspace(workspaceId, …, { agentPreset: 'redteam' })` 切到项目工作区并打开红队会话，**不写草稿、不要求回车**；进去直接说话。想再开一个点「新建对话」（`connectWorkspace` + `openSession`）。
+- **一键「新建项目并进入」**：名称（+CIDR/说明）→ 建目录 → 建工作区「攻防演练 · 名称」→ 直接进入该工作区的红队会话。
+- **支持删除项目**：后端 `deleteEngagement` 关库句柄 → 清会话绑定 → 清当前指针 → 删目录，返回绑定过的工作区 id，客户端再 `workspaces.delete` 一并移除工作区。前端二次确认，按钮在指挥台与项目卡片上。
+- 归档降级为编辑面板里的次要动作（默认按钮不再出现「归档」）。
+- 项目卡片与指挥台都显示「工作区：已绑定/将自动创建」与目录路径，避免"会话到底开在哪"的疑问。
+- `projects` 列表增加 `dir / workspace_id / workspace_title`；`openEngagement` 返回值增加 `dir`。
+
+# 2.5.0
+
+## 中文
+
+- **项目 = 目录 = DSH 工作区**（本次核心）：新建项目时自动 `$DSH_HOME/redteam/engagements/<项目>` 目录 + `workspaces.create({ path })` 注册成宿主工作区，标题写成「攻防演练 · 项目名」，并把 `workspace_id` 回写 `engagement.yaml`。
+  - 左侧栏工作区列表里会直接出现这个工作区，和「DSH / 默认工作区」并列；
+  - 「开始演练」用 `uiWorkspace.startSession(workspaceId, …)` 把会话建在**该工作区**里，不再散落在默认工作区；
+  - 项目卡片新增「工作区：已绑定 / 将自动创建」与「复制目录」，目录就是资产库所在目录（assets.db、agents、runs、reports 全在里面）。
+- 新增 op `linkWorkspace`（engagement → workspaceId + 标题）；`openEngagement` 返回值增加 `dir`；`projects` 列表增加 `dir` / `workspace_id` / `workspace_title`。
+- 老项目自动补齐：任何入口开始演练时，若项目还没绑工作区，会先按目录创建/采纳工作区再开会话（幂等，失败不阻塞）。
+- **红队模式预设注册已验证通过**：`preset-declare.json` 现为 `{"ok": true, "phase": "registered", "broken": null}`，宿主日志同时输出 `redteam-mode: declared for mode dropdown: 红队模式`。
+
+# 2.4.0
+
+## 中文
+
+- **预设自愈上移为插件行为**：`lib/redteam/index.js` 的 `apply()` 每次启动都先对 `$DSH_HOME/.agent-presets/redteam/agent.cordis.yml` 跑一次 `repairRc3Schema()`（删 list-agents 子行、toolFilter 块、backgroundMode / modelSelectionSettings 行），用户手工改过角色提示词也不动。配合已有的 `needsCompositionRepair`（worker-thread / tools 包名 / delegation），旧预设在新宿主上首次启动即自愈。
+- **新增运行时控制面 `ctx.redteamPreset`**：`status()` 读最近注册结果，`reregister()` 就地修复并重新注册。不再依赖宿主重启才能看到预设状态。
+- **/redteam/api 新增 `drillDoctor` / `presetRepair`**：五项就绪检查（预设声明与 broken 原因 / 项目数 / 技能数 / 并发上限 / 事实库路径）+ 一键修复。预设坏的时候，面板可以直接告诉你坏在哪、点一下修好。
+- **破甲面板「总览」改为「指挥台」**：开工检查网格（绿=可用 / 红=失败并显示 broken 首行）→ 选/建项目 → 开场白预览（可编辑，跟随当前项目自动重写）→ 「开始演练」一键新建「红队模式」会话并**自动切回对话**。演练发生在会话里，面板只是发射台。
+- 一键入口改进：`startDrill` 支持自定义开场白；`createProject` 从面板直接建项目；`closeMain` 用 `layout.selectPanel(null)` 关闭全局面板。会话头按钮打开面板时自动切到指挥台。
+- 右栏「dsh-purge」页签的会话绑定控件保留，但主入口收敛到指挥台——用户不再需要在多个地方找「怎么用」。
+
+# 2.3.1
+
+## 中文
+
+- **修复「红队模式」预设在 core 0.2.2-rc.3 上注册失败（registered-broken）——这是"攻防演练模式根本用不了"的真正原因**：
+  - 删除 `tool-subagent-list-agents` 行：rc.3 已把 `list_agents` 并入 `@deepseek-ai/dsh-tool-subagent-control` 主插件，子路径 `.../list-agents` 不再有 exports，保留该行会让整份 preset 加载失败；
+  - `tool-subagent` 配置对齐 rc.3 schema：去掉 `toolFilter`（已移除，带它会报迁移错误）与 `modelSelectionSettings` / `backgroundMode`（不存在），改用 `modelSelection: true`；叶子化由 `maxDepth: 1` 保证；
+  - `tool-subagent-fork` / `codex` / `claude-code` 去掉 `backgroundMode`。
+- **新增「开始演练」一键入口**（项目卡片 + 项目头）：设置当前项目 → 用 `uiWorkspace.startSession({ agentPreset: 'redteam' })` 新建会话 → 开场白已经写好「preflight → 开靶/绑定 → 五角色派活 → 落库记分 → digest 收尾」。用户只需要点一下再发送。
+- 项目卡片主按钮改为「开始演练」，「进入工作台」降为次按钮；项目头也提供「开始演练」。
+- 用户手册新增「怎么用」一节：新建红队会话的两条路径（一键 / 手动选预设）、五个角色怎么被调用、绑定语义、五步标准流程。
+
+# 2.3.0
+
+## 中文
+
+- **把「项目」升为红队演练的第一等公民**。业务模型澄清：一个项目（engagement）= 一个靶标工作区（独立目录 + 独立 SQLite：资产/端口/指纹/漏洞/凭据/攻击链/得分/截图），项目之间零共享；知识库、技能库、环境适配是全局的。会话（含其派出的子智能体）通过 `session-bindings.json` 绑到一个项目。
+- **新增项目中心页签（projects）**：卡片网格一屏看清「有哪些项目、每个做到哪、最近谁在动」——状态（进行中/已收尾/已归档）、授权范围 CIDR、阶段得分进度、资产/漏洞/得分、最近活动时间、绑定会话数；支持新建（名称 + CIDR + 目标说明）、进入工作台、设为当前、编辑、归档/恢复。默认页签在无项目时自动落到项目中心。
+- **工作台顶部新增项目头**：当前项目名 + 状态 + CIDR + 返回项目中心；有会话上下文时显示「本会话已绑定 / 绑定本会话 / 解绑」，绑定同时同步全局当前项目指针（面板与智能体一致）。
+- **页签按作用域分组**：项目组（项目中心 / 总览 / 资产测绘 / 智能体 / 会话隧道 / 漏洞战果 / 攻击链 / 得分目标 / 报告）与全局组（知识库 / 技能库 / 环境适配），避免"切项目时全局页没变"的误解。
+- **右栏页签补上会话绑定控制**：显示本会话绑定的项目、下拉切换、解绑；绑定后即时 `activateEngagement`，把面板指针与会话绑定拉到同一项目。
+- **后端绑定收敛到一处**：新增 `lib/redteam/bindings.js`（内存 + `session-bindings.json` 原子写、500 条 FIFO），工具侧（tools.js）与界面侧（store-core）共用同一实例——此前界面改磁盘、工具读旧内存会造成"面板绑了 A、智能体还在打 B"。
+- 新增 /redteam/api op：`projects`、`updateEngagement`、`bindings`、`bindSession`（`engagement` 传空即解绑）、`unbindEngagement`。
+- 会话头按钮与右栏「红队演练台」现在把会话 id 带进主面板，工作台才知道"本会话是谁"，绑定按钮因此真正可用。
+
+# 2.2.0
+
+## 中文
+
+- **界面形态重构：破甲进入全局面板（main，root 作用域）+ 左侧栏「破甲」图标**。右侧栏默认 ~360px 且 `sidebar.right.pane.tab` 是 session 作用域——新会话没有会话上下文时整块不渲染、演练台表格挤成竖条，这是"新对话看不到、打开是侧边栏且内容异常"的结构性原因。现在主工作台走 `main`（与宿主「插件 / 自动化任务」并列，全宽、新会话可用），右侧栏只保留轻量状态卡。
+- **修复红队页签空白**：`sidebar.right.pane.tab` 的 keyed 分发键是页签类型定义的 **id**，旧代码把 body 注册在 `key: 'redteam'` 而上报的类型 id 是 `dsh-purge-redteam`，两者不同名 → 打开后永远没有 body（"红队演练界面根本无法显示"）。现统一为 `RT_NS`。
+- **修复面板白屏/卡死**：`live.ts` 的 `getSnapshot` 每次返回新对象，`useSyncExternalStore` 判定快照持续变化 → 无限重渲染。改为状态改动统一走 `publish()` 换一次快照。
+- **修复"白底白字"隐形按钮**：宿主暗色主题的 `--dsw-alias-brand-primary` 是中性近白色（不是品牌蓝），旧样式拿它当填充色 + `label-on-color`（白）→ 主按钮完全不可见（侧栏里那条"空白横条"就是它）。填充改用 `--dsw-alias-button-info-fill`，强调色统一收敛到插件变量 `--dshp-accent`（21 处）；`--dsw-alias-label-error`/`fill-l1` 早已不存在，改用 `state-error-primary`/`interactive-bg-hover`。
+- 状态卡改两列键值网格（字段标签独立 key），版本号缺失时显示"未知"而不是空串。
+- 入口收敛：会话头按钮 / 右侧栏「红队演练台」/ 设置页都以 `layout.selectPanel('dsh-purge')` 打开全局面板并切到对应页签；无 `layout` 时降级到设置分区。
+
 # 2.1.0
 
 ## 中文

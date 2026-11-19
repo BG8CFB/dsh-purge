@@ -31,11 +31,15 @@ export function KnowledgeTab(props: RtTabProps): ReturnType<typeof h> {
   const [detail, setDetail] = useState<AnyRec | null>(null)
   const [detailBusy, setDetailBusy] = useState(false)
   const [tplOffset, setTplOffset] = useState(0)
+  /** 知识库范围：project（随项目走）| global（跨项目）| all（合并） */
+  const [scope, setScope] = useState<'project' | 'global' | 'all'>('all')
 
   const query = (over: AnyRec = {}): void => {
     const offset = Object.prototype.hasOwnProperty.call(over, 'templateOffset') ? over.templateOffset : 0
     setTplOffset(offset)
     const params: AnyRec = {
+      scope,
+      engagement: props.eng || undefined,
       q: q.trim() || undefined,
       kind: kind || undefined,
       category: category || undefined,
@@ -65,7 +69,8 @@ export function KnowledgeTab(props: RtTabProps): ReturnType<typeof h> {
     setOpenId(id)
     setDetail(null)
     setDetailBusy(true)
-    void rtOp<AnyRec>('pocGet', { id }).then((r) => {
+    const row = (((data !== null && data.items) || []) as AnyRec[]).find((x) => x.id === id)
+    void rtOp<AnyRec>('pocGet', { id, scope: (row && row.scope) || (scope === 'project' ? 'project' : 'global') }).then((r) => {
       setDetailBusy(false)
       if (!r.ok) { setMsg({ err: r.error }); return }
       setDetail(r.data)
@@ -78,7 +83,7 @@ export function KnowledgeTab(props: RtTabProps): ReturnType<typeof h> {
     })
   }
   const useIt = (row: AnyRec): void => {
-    void rtOp('pocUse', { id: row.id, used_on: t('rt.k.manualUse') }).then(() => {
+    void rtOp('pocUse', { id: row.id, used_on: t('rt.k.manualUse'), scope: (row && row.scope) || (scope === 'project' ? 'project' : 'global') }).then(() => {
       setMsg({ ok: t('rt.k.usedMarked', { title: row.title }) })
       query()
     })
@@ -163,8 +168,17 @@ export function KnowledgeTab(props: RtTabProps): ReturnType<typeof h> {
   }
 
   return h('div', { class: 'dshp-rt-main' },
+    // 定位说明：知识库是全局的，项目内的资产/漏洞不在这里
+    h('div', { class: 'dshp-rt-hint', style: { padding: '6px 12px', margin: 0 } }, t('rt.k.scopeHint')),
     h('div', { class: 'dshp-rt-toolbar' },
       h('span', { style: { fontWeight: 600 } }, t('rt.tab.knowledge')),
+      (['project', 'global', 'all'] as const).map((s) => h('button', {
+        key: s,
+        class: 'dshp-rt-btn' + (scope === s ? ' dshp-rt-btn-primary' : ''),
+        type: 'button',
+        title: t('rt.k.scope.' + s + 'Tip'),
+        onClick: () => { setScope(s); query({ scope: s }) },
+      }, t('rt.k.scope.' + s))),
       h('span', { class: 'dshp-rt-tag' }, t('rt.k.totalN', { n: stats.total })),
       h('span', { class: 'dshp-rt-tag dshp-rt-tag-live' }, t('rt.k.verifiedN', { n: stats.verified })),
       h('span', { class: 'dshp-rt-tag' }, t('rt.k.reusedN', { n: stats.reused ?? 0 })),
